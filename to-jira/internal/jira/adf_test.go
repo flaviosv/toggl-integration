@@ -78,6 +78,12 @@ func TestExtractTogglID_NoMarkerOrStructurallyDifferent(t *testing.T) {
 			}},
 		},
 		{
+			name: "paragraph with empty content",
+			doc: ADFDocument{Type: "doc", Version: 1, Content: []ADFNode{
+				{Type: "paragraph", Content: nil},
+			}},
+		},
+		{
 			name: "marker not at start of text run",
 			doc: ADFDocument{Type: "doc", Version: 1, Content: []ADFNode{
 				{Type: "paragraph", Content: []ADFNode{{Type: "text", Text: "edited [TogglID:42] moved"}}},
