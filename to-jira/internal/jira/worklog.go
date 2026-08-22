@@ -9,6 +9,27 @@ import (
 	"net/url"
 )
 
+// jiraTimeLayout formats time.Time as JIRA's worklog "started" field expects
+// (e.g. "2021-01-17T12:34:00.000+0000") — millisecond precision, no colon in
+// the UTC offset.
+const jiraTimeLayout = "2006-01-02T15:04:05.000-0700"
+
+// worklogRequestBody is the JIRA v3 request shape shared by CreateWorklog
+// and UpdateWorklog.
+type worklogRequestBody struct {
+	TimeSpentSeconds int64       `json:"timeSpentSeconds"`
+	Started          string      `json:"started"`
+	Comment          ADFDocument `json:"comment"`
+}
+
+func newWorklogRequestBody(in WorklogInput) worklogRequestBody {
+	return worklogRequestBody{
+		TimeSpentSeconds: in.TimeSpentSeconds,
+		Started:          in.Started.Format(jiraTimeLayout),
+		Comment:          in.Comment,
+	}
+}
+
 // TransientError wraps a JIRA API failure that is likely to succeed on
 // retry: a network-level error, a 5xx response, or a 429 (rate limit).
 type TransientError struct {
@@ -88,4 +109,24 @@ func (c *Client) FindWorklogByTogglID(ctx context.Context, issueKey, togglID str
 			return nil, nil
 		}
 	}
+}
+
+// CreateWorklog adds a new worklog to issueKey via POST .../worklog (TJ-05).
+func (c *Client) CreateWorklog(ctx context.Context, issueKey string, in WorklogInput) (*Worklog, error) {
+	path := fmt.Sprintf("/rest/api/3/issue/%s/worklog", url.PathEscape(issueKey))
+	resp, err := c.do(ctx, http.MethodPost, path, newWorklogRequestBody(in))
+	if err != nil {
+		return nil, &TransientError{Err: fmt.Errorf("jira: create worklog: %w", err)}
+	}
+	defer resp.Body.Close()
+
+	if statusErr := classifyStatus(resp); statusErr != nil {
+		return nil, statusErr
+	}
+
+	var created Worklog
+	if err := json.NewDecoder(resp.Body).Decode(&created); err != nil {
+		return nil, fmt.Errorf("jira: decode created worklog: %w", err)
+	}
+	return &created, nil
 }
