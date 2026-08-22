@@ -143,3 +143,16 @@ func (c *Client) UpdateWorklog(ctx context.Context, issueKey, worklogID string, 
 
 	return classifyStatus(resp)
 }
+
+// DeleteWorklog removes worklogID from issueKey via
+// DELETE .../worklog/{worklogId} (TJ-10).
+func (c *Client) DeleteWorklog(ctx context.Context, issueKey, worklogID string) error {
+	path := fmt.Sprintf("/rest/api/3/issue/%s/worklog/%s", url.PathEscape(issueKey), url.PathEscape(worklogID))
+	resp, err := c.do(ctx, http.MethodDelete, path, nil)
+	if err != nil {
+		return &TransientError{Err: fmt.Errorf("jira: delete worklog: %w", err)}
+	}
+	defer resp.Body.Close()
+
+	return classifyStatus(resp)
+}

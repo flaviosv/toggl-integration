@@ -177,6 +177,63 @@ func TestUpdateWorklog_PermanentError(t *testing.T) {
 	}
 }
 
+// DeleteWorklog must return nil on a successful delete against a fake
+// server.
+func TestDeleteWorklog_Success(t *testing.T) {
+	var gotMethod, gotPath string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		gotMethod = r.Method
+		gotPath = r.URL.Path
+		w.WriteHeader(http.StatusNoContent)
+	}))
+	defer srv.Close()
+	c := NewClient(srv.URL, "user@example.com", "token", nil)
+
+	err := c.DeleteWorklog(context.Background(), "ABC-1", "100028")
+
+	if err != nil {
+		t.Fatalf("err = %v, want nil", err)
+	}
+	if gotMethod != http.MethodDelete {
+		t.Errorf("method = %q, want DELETE", gotMethod)
+	}
+	if gotPath != "/rest/api/3/issue/ABC-1/worklog/100028" {
+		t.Errorf("path = %q, want %q", gotPath, "/rest/api/3/issue/ABC-1/worklog/100028")
+	}
+}
+
+// DeleteWorklog must return a *TransientError on a 5xx response.
+func TestDeleteWorklog_TransientError(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusBadGateway)
+	}))
+	defer srv.Close()
+	c := NewClient(srv.URL, "user@example.com", "token", nil)
+
+	err := c.DeleteWorklog(context.Background(), "ABC-1", "100028")
+
+	var transientErr *TransientError
+	if !errors.As(err, &transientErr) {
+		t.Fatalf("err = %v (%T), want *TransientError", err, err)
+	}
+}
+
+// DeleteWorklog must return a *PermanentError on a 4xx response.
+func TestDeleteWorklog_PermanentError(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusNotFound)
+	}))
+	defer srv.Close()
+	c := NewClient(srv.URL, "user@example.com", "token", nil)
+
+	err := c.DeleteWorklog(context.Background(), "ABC-1", "unknown-worklog")
+
+	var permanentErr *PermanentError
+	if !errors.As(err, &permanentErr) {
+		t.Fatalf("err = %v (%T), want *PermanentError", err, err)
+	}
+}
+
 // CreateWorklog must send timeSpentSeconds, started, and comment (ADF) in
 // the request body, and decode the created worklog from the response.
 func TestCreateWorklog_SendsCorrectBody(t *testing.T) {
