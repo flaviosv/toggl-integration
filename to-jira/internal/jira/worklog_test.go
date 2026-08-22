@@ -108,6 +108,75 @@ func TestFindWorklogByTogglID_ServerError(t *testing.T) {
 	}
 }
 
+// UpdateWorklog must send timeSpentSeconds, started, and comment (ADF) as
+// the PUT body against the correct worklogID path.
+func TestUpdateWorklog_SendsCorrectBody(t *testing.T) {
+	started := time.Date(2021, 1, 17, 12, 34, 0, 0, time.UTC)
+	in := WorklogInput{TimeSpentSeconds: 3600, Started: started, Comment: BuildComment("42", "updated")}
+
+	var gotMethod, gotPath string
+	var gotBody worklogRequestBody
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		gotMethod = r.Method
+		gotPath = r.URL.Path
+		json.NewDecoder(r.Body).Decode(&gotBody)
+		w.WriteHeader(http.StatusOK)
+		json.NewEncoder(w).Encode(Worklog{ID: "100028", Comment: in.Comment})
+	}))
+	defer srv.Close()
+	c := NewClient(srv.URL, "user@example.com", "token", nil)
+
+	err := c.UpdateWorklog(context.Background(), "ABC-1", "100028", in)
+
+	if err != nil {
+		t.Fatalf("err = %v, want nil", err)
+	}
+	if gotMethod != http.MethodPut {
+		t.Errorf("method = %q, want PUT", gotMethod)
+	}
+	if gotPath != "/rest/api/3/issue/ABC-1/worklog/100028" {
+		t.Errorf("path = %q, want %q", gotPath, "/rest/api/3/issue/ABC-1/worklog/100028")
+	}
+	if gotBody.TimeSpentSeconds != 3600 {
+		t.Errorf("TimeSpentSeconds = %d, want 3600", gotBody.TimeSpentSeconds)
+	}
+	if id, ok := ExtractTogglID(gotBody.Comment); !ok || id != "42" {
+		t.Errorf("Comment TogglID = %q (ok=%v), want 42", id, ok)
+	}
+}
+
+// UpdateWorklog must return a *TransientError on a 5xx response.
+func TestUpdateWorklog_TransientError(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusServiceUnavailable)
+	}))
+	defer srv.Close()
+	c := NewClient(srv.URL, "user@example.com", "token", nil)
+
+	err := c.UpdateWorklog(context.Background(), "ABC-1", "100028", WorklogInput{})
+
+	var transientErr *TransientError
+	if !errors.As(err, &transientErr) {
+		t.Fatalf("err = %v (%T), want *TransientError", err, err)
+	}
+}
+
+// UpdateWorklog must return a *PermanentError on a 4xx response.
+func TestUpdateWorklog_PermanentError(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusNotFound)
+	}))
+	defer srv.Close()
+	c := NewClient(srv.URL, "user@example.com", "token", nil)
+
+	err := c.UpdateWorklog(context.Background(), "ABC-1", "unknown-worklog", WorklogInput{})
+
+	var permanentErr *PermanentError
+	if !errors.As(err, &permanentErr) {
+		t.Fatalf("err = %v (%T), want *PermanentError", err, err)
+	}
+}
+
 // CreateWorklog must send timeSpentSeconds, started, and comment (ADF) in
 // the request body, and decode the created worklog from the response.
 func TestCreateWorklog_SendsCorrectBody(t *testing.T) {

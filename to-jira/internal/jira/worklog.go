@@ -130,3 +130,16 @@ func (c *Client) CreateWorklog(ctx context.Context, issueKey string, in WorklogI
 	}
 	return &created, nil
 }
+
+// UpdateWorklog replaces worklogID's duration/comment on issueKey via
+// PUT .../worklog/{worklogId} (TJ-06).
+func (c *Client) UpdateWorklog(ctx context.Context, issueKey, worklogID string, in WorklogInput) error {
+	path := fmt.Sprintf("/rest/api/3/issue/%s/worklog/%s", url.PathEscape(issueKey), url.PathEscape(worklogID))
+	resp, err := c.do(ctx, http.MethodPut, path, newWorklogRequestBody(in))
+	if err != nil {
+		return &TransientError{Err: fmt.Errorf("jira: update worklog: %w", err)}
+	}
+	defer resp.Body.Close()
+
+	return classifyStatus(resp)
+}
