@@ -16,6 +16,7 @@ func worklogFixture(id, togglID string) Worklog {
 
 // FindWorklogByTogglID must return the matching worklog when present.
 func TestFindWorklogByTogglID_Found(t *testing.T) {
+	t.Parallel()
 	want := worklogFixture("100028", "42")
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		page := pageOfWorklogs{StartAt: 0, MaxResults: 10, Total: 1, Worklogs: []Worklog{want}}
@@ -39,6 +40,7 @@ func TestFindWorklogByTogglID_Found(t *testing.T) {
 
 // FindWorklogByTogglID must return nil, nil when no worklog matches.
 func TestFindWorklogByTogglID_NotFound(t *testing.T) {
+	t.Parallel()
 	other := worklogFixture("1", "99")
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		page := pageOfWorklogs{StartAt: 0, MaxResults: 10, Total: 1, Worklogs: []Worklog{other}}
@@ -60,13 +62,17 @@ func TestFindWorklogByTogglID_NotFound(t *testing.T) {
 // FindWorklogByTogglID must follow pagination (startAt) across multiple
 // pages until either a match is found or total is exhausted.
 func TestFindWorklogByTogglID_Paginated(t *testing.T) {
+	t.Parallel()
 	page0 := worklogFixture("1", "1")
 	page1 := worklogFixture("2", "42")
 	var requestedStartAt []string
+	var requestedMaxResults []string
 
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		startAt := r.URL.Query().Get("startAt")
+		maxResults := r.URL.Query().Get("maxResults")
 		requestedStartAt = append(requestedStartAt, startAt)
+		requestedMaxResults = append(requestedMaxResults, maxResults)
 
 		var page pageOfWorklogs
 		if startAt == "0" {
@@ -90,27 +96,15 @@ func TestFindWorklogByTogglID_Paginated(t *testing.T) {
 	if len(requestedStartAt) != 2 || requestedStartAt[0] != "0" || requestedStartAt[1] != "1" {
 		t.Errorf("requestedStartAt = %v, want [0 1]", requestedStartAt)
 	}
-}
-
-// FindWorklogByTogglID must return a *TransientError on a 5xx response.
-func TestFindWorklogByTogglID_ServerError(t *testing.T) {
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusInternalServerError)
-	}))
-	defer srv.Close()
-	c := NewClient(srv.URL, "user@example.com", "token", nil)
-
-	_, err := c.FindWorklogByTogglID(context.Background(), "ABC-1", "42")
-
-	var transientErr *TransientError
-	if !errors.As(err, &transientErr) {
-		t.Fatalf("err = %v (%T), want *TransientError", err, err)
+	if len(requestedMaxResults) != 2 || requestedMaxResults[0] != "100" || requestedMaxResults[1] != "100" {
+		t.Errorf("requestedMaxResults = %v, want [100 100]", requestedMaxResults)
 	}
 }
 
 // UpdateWorklog must send timeSpentSeconds, started, and comment (ADF) as
 // the PUT body against the correct worklogID path.
 func TestUpdateWorklog_SendsCorrectBody(t *testing.T) {
+	t.Parallel()
 	started := time.Date(2021, 1, 17, 12, 34, 0, 0, time.UTC)
 	in := WorklogInput{TimeSpentSeconds: 3600, Started: started, Comment: BuildComment("42", "updated")}
 
@@ -145,41 +139,11 @@ func TestUpdateWorklog_SendsCorrectBody(t *testing.T) {
 	}
 }
 
-// UpdateWorklog must return a *TransientError on a 5xx response.
-func TestUpdateWorklog_TransientError(t *testing.T) {
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusServiceUnavailable)
-	}))
-	defer srv.Close()
-	c := NewClient(srv.URL, "user@example.com", "token", nil)
-
-	err := c.UpdateWorklog(context.Background(), "ABC-1", "100028", WorklogInput{})
-
-	var transientErr *TransientError
-	if !errors.As(err, &transientErr) {
-		t.Fatalf("err = %v (%T), want *TransientError", err, err)
-	}
-}
-
-// UpdateWorklog must return a *PermanentError on a 4xx response.
-func TestUpdateWorklog_PermanentError(t *testing.T) {
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusNotFound)
-	}))
-	defer srv.Close()
-	c := NewClient(srv.URL, "user@example.com", "token", nil)
-
-	err := c.UpdateWorklog(context.Background(), "ABC-1", "unknown-worklog", WorklogInput{})
-
-	var permanentErr *PermanentError
-	if !errors.As(err, &permanentErr) {
-		t.Fatalf("err = %v (%T), want *PermanentError", err, err)
-	}
-}
 
 // DeleteWorklog must return nil on a successful delete against a fake
 // server.
 func TestDeleteWorklog_Success(t *testing.T) {
+	t.Parallel()
 	var gotMethod, gotPath string
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		gotMethod = r.Method
@@ -202,41 +166,11 @@ func TestDeleteWorklog_Success(t *testing.T) {
 	}
 }
 
-// DeleteWorklog must return a *TransientError on a 5xx response.
-func TestDeleteWorklog_TransientError(t *testing.T) {
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusBadGateway)
-	}))
-	defer srv.Close()
-	c := NewClient(srv.URL, "user@example.com", "token", nil)
-
-	err := c.DeleteWorklog(context.Background(), "ABC-1", "100028")
-
-	var transientErr *TransientError
-	if !errors.As(err, &transientErr) {
-		t.Fatalf("err = %v (%T), want *TransientError", err, err)
-	}
-}
-
-// DeleteWorklog must return a *PermanentError on a 4xx response.
-func TestDeleteWorklog_PermanentError(t *testing.T) {
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusNotFound)
-	}))
-	defer srv.Close()
-	c := NewClient(srv.URL, "user@example.com", "token", nil)
-
-	err := c.DeleteWorklog(context.Background(), "ABC-1", "unknown-worklog")
-
-	var permanentErr *PermanentError
-	if !errors.As(err, &permanentErr) {
-		t.Fatalf("err = %v (%T), want *PermanentError", err, err)
-	}
-}
 
 // CreateWorklog must send timeSpentSeconds, started, and comment (ADF) in
 // the request body, and decode the created worklog from the response.
 func TestCreateWorklog_SendsCorrectBody(t *testing.T) {
+	t.Parallel()
 	started := time.Date(2021, 1, 17, 12, 34, 0, 0, time.UTC)
 	in := WorklogInput{TimeSpentSeconds: 1800, Started: started, Comment: BuildComment("42", "did the thing")}
 
@@ -277,42 +211,11 @@ func TestCreateWorklog_SendsCorrectBody(t *testing.T) {
 	}
 }
 
-// CreateWorklog must return a *TransientError on a 5xx response.
-func TestCreateWorklog_TransientError(t *testing.T) {
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusServiceUnavailable)
-	}))
-	defer srv.Close()
-	c := NewClient(srv.URL, "user@example.com", "token", nil)
-
-	_, err := c.CreateWorklog(context.Background(), "ABC-1", WorklogInput{})
-
-	var transientErr *TransientError
-	if !errors.As(err, &transientErr) {
-		t.Fatalf("err = %v (%T), want *TransientError", err, err)
-	}
-}
-
-// CreateWorklog must return a *PermanentError on a 4xx response (e.g.
-// unknown issue key).
-func TestCreateWorklog_PermanentError(t *testing.T) {
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusNotFound)
-	}))
-	defer srv.Close()
-	c := NewClient(srv.URL, "user@example.com", "token", nil)
-
-	_, err := c.CreateWorklog(context.Background(), "UNKNOWN-1", WorklogInput{})
-
-	var permanentErr *PermanentError
-	if !errors.As(err, &permanentErr) {
-		t.Fatalf("err = %v (%T), want *PermanentError", err, err)
-	}
-}
 
 // CreateWorklog must return a *TransientError on a network-level failure
 // (server unreachable), distinct from a permanent 4xx.
 func TestCreateWorklog_NetworkError(t *testing.T) {
+	t.Parallel()
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {}))
 	c := NewClient(srv.URL, "user@example.com", "token", nil)
 	srv.Close()
@@ -322,5 +225,209 @@ func TestCreateWorklog_NetworkError(t *testing.T) {
 	var transientErr *TransientError
 	if !errors.As(err, &transientErr) {
 		t.Fatalf("err = %v (%T), want *TransientError", err, err)
+	}
+}
+
+// FindWorklogByTogglID must return an error when the response body is not
+// valid JSON, even when the status is 2xx.
+func TestFindWorklogByTogglID_MalformedJSONBody(t *testing.T) {
+	t.Parallel()
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte("not json"))
+	}))
+	defer srv.Close()
+	c := NewClient(srv.URL, "user@example.com", "token", nil)
+
+	_, err := c.FindWorklogByTogglID(context.Background(), "ABC-1", "42")
+
+	if err == nil {
+		t.Fatal("err = nil, want non-nil error")
+	}
+}
+
+// CreateWorklog must return an error when the response body is not valid JSON,
+// even when the status is 2xx (201).
+func TestCreateWorklog_MalformedJSONBody(t *testing.T) {
+	t.Parallel()
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusCreated)
+		w.Write([]byte("not json"))
+	}))
+	defer srv.Close()
+	c := NewClient(srv.URL, "user@example.com", "token", nil)
+
+	_, err := c.CreateWorklog(context.Background(), "ABC-1", WorklogInput{})
+
+	if err == nil {
+		t.Fatal("err = nil, want non-nil error")
+	}
+}
+
+// FindWorklogByTogglID must return a *TransientError on a network-level failure
+// (server unreachable).
+func TestFindWorklogByTogglID_NetworkError(t *testing.T) {
+	t.Parallel()
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {}))
+	c := NewClient(srv.URL, "user@example.com", "token", nil)
+	srv.Close()
+
+	_, err := c.FindWorklogByTogglID(context.Background(), "ABC-1", "42")
+
+	var transientErr *TransientError
+	if !errors.As(err, &transientErr) {
+		t.Fatalf("err = %v (%T), want *TransientError", err, err)
+	}
+}
+
+// UpdateWorklog must return a *TransientError on a network-level failure
+// (server unreachable).
+func TestUpdateWorklog_NetworkError(t *testing.T) {
+	t.Parallel()
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {}))
+	c := NewClient(srv.URL, "user@example.com", "token", nil)
+	srv.Close()
+
+	err := c.UpdateWorklog(context.Background(), "ABC-1", "100028", WorklogInput{})
+
+	var transientErr *TransientError
+	if !errors.As(err, &transientErr) {
+		t.Fatalf("err = %v (%T), want *TransientError", err, err)
+	}
+}
+
+// DeleteWorklog must return a *TransientError on a network-level failure
+// (server unreachable).
+func TestDeleteWorklog_NetworkError(t *testing.T) {
+	t.Parallel()
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {}))
+	c := NewClient(srv.URL, "user@example.com", "token", nil)
+	srv.Close()
+
+	err := c.DeleteWorklog(context.Background(), "ABC-1", "100028")
+
+	var transientErr *TransientError
+	if !errors.As(err, &transientErr) {
+		t.Fatalf("err = %v (%T), want *TransientError", err, err)
+	}
+}
+
+// TestWorklogMethods_ClassifyErrorsByStatus tests error classification across
+// all worklog methods for various HTTP status codes.
+func TestWorklogMethods_ClassifyErrorsByStatus(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name          string
+		statusCode    int
+		call          func(c *Client) error
+		wantTransient bool
+	}{
+		// FindWorklogByTogglID cases
+		{
+			name:       "FindWorklogByTogglID_Transient500",
+			statusCode: http.StatusInternalServerError,
+			call: func(c *Client) error {
+				_, err := c.FindWorklogByTogglID(context.Background(), "ABC-1", "42")
+				return err
+			},
+			wantTransient: true,
+		},
+		{
+			name:       "FindWorklogByTogglID_Permanent404",
+			statusCode: http.StatusNotFound,
+			call: func(c *Client) error {
+				_, err := c.FindWorklogByTogglID(context.Background(), "ABC-1", "42")
+				return err
+			},
+			wantTransient: false,
+		},
+		// CreateWorklog cases
+		{
+			name:       "CreateWorklog_Transient503",
+			statusCode: http.StatusServiceUnavailable,
+			call: func(c *Client) error {
+				_, err := c.CreateWorklog(context.Background(), "ABC-1", WorklogInput{})
+				return err
+			},
+			wantTransient: true,
+		},
+		{
+			name:       "CreateWorklog_Permanent404",
+			statusCode: http.StatusNotFound,
+			call: func(c *Client) error {
+				_, err := c.CreateWorklog(context.Background(), "UNKNOWN-1", WorklogInput{})
+				return err
+			},
+			wantTransient: false,
+		},
+		// UpdateWorklog cases
+		{
+			name:       "UpdateWorklog_Transient503",
+			statusCode: http.StatusServiceUnavailable,
+			call: func(c *Client) error {
+				return c.UpdateWorklog(context.Background(), "ABC-1", "100028", WorklogInput{})
+			},
+			wantTransient: true,
+		},
+		{
+			name:       "UpdateWorklog_Permanent404",
+			statusCode: http.StatusNotFound,
+			call: func(c *Client) error {
+				return c.UpdateWorklog(context.Background(), "ABC-1", "unknown-worklog", WorklogInput{})
+			},
+			wantTransient: false,
+		},
+		// DeleteWorklog cases
+		{
+			name:       "DeleteWorklog_Transient502",
+			statusCode: http.StatusBadGateway,
+			call: func(c *Client) error {
+				return c.DeleteWorklog(context.Background(), "ABC-1", "100028")
+			},
+			wantTransient: true,
+		},
+		{
+			name:       "DeleteWorklog_Permanent404",
+			statusCode: http.StatusNotFound,
+			call: func(c *Client) error {
+				return c.DeleteWorklog(context.Background(), "ABC-1", "unknown-worklog")
+			},
+			wantTransient: false,
+		},
+		// Rate limit case
+		{
+			name:       "CreateWorklog_Transient429",
+			statusCode: http.StatusTooManyRequests,
+			call: func(c *Client) error {
+				_, err := c.CreateWorklog(context.Background(), "ABC-1", WorklogInput{})
+				return err
+			},
+			wantTransient: true,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				w.WriteHeader(tc.statusCode)
+			}))
+			defer srv.Close()
+			c := NewClient(srv.URL, "user@example.com", "token", nil)
+
+			err := tc.call(c)
+
+			if tc.wantTransient {
+				var transientErr *TransientError
+				if !errors.As(err, &transientErr) {
+					t.Fatalf("err = %v (%T), want *TransientError", err, err)
+				}
+			} else {
+				var permanentErr *PermanentError
+				if !errors.As(err, &permanentErr) {
+					t.Fatalf("err = %v (%T), want *PermanentError", err, err)
+				}
+			}
+		})
 	}
 }

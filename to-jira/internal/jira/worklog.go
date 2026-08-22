@@ -14,6 +14,8 @@ import (
 // the UTC offset.
 const jiraTimeLayout = "2006-01-02T15:04:05.000-0700"
 
+const findWorklogPageSize = 100
+
 // worklogRequestBody is the JIRA v3 request shape shared by CreateWorklog
 // and UpdateWorklog.
 type worklogRequestBody struct {
@@ -79,7 +81,7 @@ type pageOfWorklogs struct {
 func (c *Client) FindWorklogByTogglID(ctx context.Context, issueKey, togglID string) (*Worklog, error) {
 	startAt := 0
 	for {
-		path := fmt.Sprintf("/rest/api/3/issue/%s/worklog?startAt=%d", url.PathEscape(issueKey), startAt)
+		path := fmt.Sprintf("/rest/api/3/issue/%s/worklog?startAt=%d&maxResults=%d", url.PathEscape(issueKey), startAt, findWorklogPageSize)
 		resp, err := c.do(ctx, http.MethodGet, path, nil)
 		if err != nil {
 			return nil, &TransientError{Err: fmt.Errorf("jira: list worklogs: %w", err)}
