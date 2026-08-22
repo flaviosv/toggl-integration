@@ -74,6 +74,18 @@ func TestParseDescription(t *testing.T) {
 			desc:   "",
 			wantOK: false,
 		},
+		{
+			name:     "10-char slug at max length",
+			desc:     "[ABCDEFGHIJ-123] Did the thing",
+			wantKey:  "ABCDEFGHIJ-123",
+			wantText: "Did the thing",
+			wantOK:   true,
+		},
+		{
+			name:   "11-char slug exceeds max length",
+			desc:   "[ABCDEFGHIJK-123] Did the thing",
+			wantOK: false,
+		},
 	}
 
 	for _, tc := range cases {
