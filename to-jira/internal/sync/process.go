@@ -59,6 +59,13 @@ func NewProcessor(client JiraClient, metrics *telemetry.Metrics, tracer trace.Tr
 	return &Processor{jira: client, metrics: metrics, tracer: tracer, dryRun: dryRun}
 }
 
+// jiraError logs a JIRA error and returns a transient-error Result.
+func (p *Processor) jiraError(ctx context.Context, msg, togglID, issueKey string, err error) Result {
+	logger.FromContext(ctx).Error(msg, "toggl_id", togglID, "issue_key", issueKey, "error", err)
+	p.metrics.JiraAPIErrors.Add(ctx, 1)
+	return Result{HTTPStatus: http.StatusBadGateway, Outcome: OutcomeTransientError}
+}
+
 // Process orchestrates TJ-02..TJ-09 for a created/updated Toggl event:
 // description-format validation, running-entry skip, idempotent lookup by
 // TogglID marker, and create-or-update against JIRA.
@@ -69,7 +76,7 @@ func (p *Processor) Process(ctx context.Context, e toggl.Event) Result {
 
 	issueKey, text, ok := toggl.ParseDescription(e.Description)
 	if !ok {
-		logger.FromContext(ctx).Warn("sync: invalid description format", "toggl_id", e.TogglID, "description", e.Description)
+		logger.FromContext(ctx).Warn("sync: invalid description format", "toggl_id", e.TogglID, "description_len", len(e.Description))
 		p.metrics.ValidationErrors.Add(ctx, 1)
 		return Result{HTTPStatus: http.StatusOK, Outcome: OutcomeSkippedInvalid}
 	}
@@ -80,9 +87,7 @@ func (p *Processor) Process(ctx context.Context, e toggl.Event) Result {
 
 	existing, err := p.jira.FindWorklogByTogglID(ctx, issueKey, e.TogglID)
 	if err != nil {
-		logger.FromContext(ctx).Error("sync: jira lookup failed", "toggl_id", e.TogglID, "issue_key", issueKey, "error", err)
-		p.metrics.JiraAPIErrors.Add(ctx, 1)
-		return Result{HTTPStatus: http.StatusBadGateway, Outcome: OutcomeTransientError}
+		return p.jiraError(ctx, "sync: jira lookup failed", e.TogglID, issueKey, err)
 	}
 
 	input := jira.WorklogInput{
@@ -103,9 +108,7 @@ func (p *Processor) upsertUpdate(ctx context.Context, issueKey, worklogID string
 		return Result{HTTPStatus: http.StatusOK, Outcome: OutcomeUpdated}
 	}
 	if err := p.jira.UpdateWorklog(ctx, issueKey, worklogID, input); err != nil {
-		logger.FromContext(ctx).Error("sync: jira update failed", "toggl_id", togglID, "issue_key", issueKey, "error", err)
-		p.metrics.JiraAPIErrors.Add(ctx, 1)
-		return Result{HTTPStatus: http.StatusBadGateway, Outcome: OutcomeTransientError}
+		return p.jiraError(ctx, "sync: jira update failed", togglID, issueKey, err)
 	}
 	p.metrics.WorklogsUpdated.Add(ctx, 1)
 	return Result{HTTPStatus: http.StatusOK, Outcome: OutcomeUpdated}
@@ -117,9 +120,7 @@ func (p *Processor) upsertCreate(ctx context.Context, issueKey string, input jir
 		return Result{HTTPStatus: http.StatusOK, Outcome: OutcomeCreated}
 	}
 	if _, err := p.jira.CreateWorklog(ctx, issueKey, input); err != nil {
-		logger.FromContext(ctx).Error("sync: jira create failed", "toggl_id", togglID, "issue_key", issueKey, "error", err)
-		p.metrics.JiraAPIErrors.Add(ctx, 1)
-		return Result{HTTPStatus: http.StatusBadGateway, Outcome: OutcomeTransientError}
+		return p.jiraError(ctx, "sync: jira create failed", togglID, issueKey, err)
 	}
 	p.metrics.WorklogsCreated.Add(ctx, 1)
 	return Result{HTTPStatus: http.StatusOK, Outcome: OutcomeCreated}

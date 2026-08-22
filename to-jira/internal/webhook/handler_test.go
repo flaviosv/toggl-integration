@@ -31,40 +31,43 @@ const testSecret = "test-secret"
 // Processor was never invoked on an authentication failure.
 type fakeJiraClient struct {
 	findResult *jira.Worklog
+	findErr    error
 	createResult *jira.Worklog
+	createErr  error
+	updateErr  error
+	deleteErr  error
 
 	findCalls, createCalls, updateCalls, deleteCalls int
 }
 
 func (f *fakeJiraClient) FindWorklogByTogglID(context.Context, string, string) (*jira.Worklog, error) {
 	f.findCalls++
-	return f.findResult, nil
+	return f.findResult, f.findErr
 }
 
 func (f *fakeJiraClient) CreateWorklog(context.Context, string, jira.WorklogInput) (*jira.Worklog, error) {
 	f.createCalls++
-	return f.createResult, nil
+	return f.createResult, f.createErr
 }
 
 func (f *fakeJiraClient) UpdateWorklog(context.Context, string, string, jira.WorklogInput) error {
 	f.updateCalls++
-	return nil
+	return f.updateErr
 }
 
 func (f *fakeJiraClient) DeleteWorklog(context.Context, string, string) error {
 	f.deleteCalls++
-	return nil
+	return f.deleteErr
 }
 
 func (f *fakeJiraClient) totalCalls() int {
 	return f.findCalls + f.createCalls + f.updateCalls + f.deleteCalls
 }
 
-func newTestHandler(t *testing.T) (*gin.Engine, *fakeJiraClient) {
+func newTestHandler(t *testing.T, fake *fakeJiraClient) (*gin.Engine, *fakeJiraClient) {
 	t.Helper()
 	gin.SetMode(gin.TestMode)
 
-	fake := &fakeJiraClient{}
 	meter := sdkmetric.NewMeterProvider().Meter("test")
 	metrics, err := telemetry.NewMetrics(meter)
 	if err != nil {
@@ -106,7 +109,8 @@ const malformedPayloadEnvelope = `{"metadata":{"request_type":"time_entry.create
 // TJ-01/AC1: a missing signature header is rejected with 401, and
 // sync.Processor is never invoked (no underlying JIRA call).
 func TestReceive_MissingSignature_Returns401NoDispatch(t *testing.T) {
-	r, fake := newTestHandler(t)
+	t.Parallel()
+	r, fake := newTestHandler(t, &fakeJiraClient{})
 
 	w := post(t, r, []byte(createdEnvelope), "")
 
@@ -121,7 +125,8 @@ func TestReceive_MissingSignature_Returns401NoDispatch(t *testing.T) {
 // TJ-01/AC1: a malformed signature (missing the "sha256=" prefix) is
 // rejected with 401.
 func TestReceive_MalformedSignature_Returns401(t *testing.T) {
-	r, fake := newTestHandler(t)
+	t.Parallel()
+	r, fake := newTestHandler(t, &fakeJiraClient{})
 
 	w := post(t, r, []byte(createdEnvelope), "not-a-valid-signature")
 
@@ -136,7 +141,8 @@ func TestReceive_MalformedSignature_Returns401(t *testing.T) {
 // TJ-01/AC1: an invalid signature (wrong HMAC of the correct body) is
 // rejected with 401.
 func TestReceive_InvalidSignature_Returns401(t *testing.T) {
-	r, fake := newTestHandler(t)
+	t.Parallel()
+	r, fake := newTestHandler(t, &fakeJiraClient{})
 	wrongSig := sign(t, "wrong-secret", []byte(createdEnvelope))
 
 	w := post(t, r, []byte(createdEnvelope), wrongSig)
@@ -152,7 +158,8 @@ func TestReceive_InvalidSignature_Returns401(t *testing.T) {
 // TJ-01/AC2: a valid signature on a created event dispatches to
 // sync.Process and passes through its 200 result.
 func TestReceive_ValidSignature_CreatedEvent_DispatchesToProcess(t *testing.T) {
-	r, fake := newTestHandler(t)
+	t.Parallel()
+	r, fake := newTestHandler(t, &fakeJiraClient{})
 	body := []byte(createdEnvelope)
 	sig := sign(t, testSecret, body)
 
@@ -169,7 +176,8 @@ func TestReceive_ValidSignature_CreatedEvent_DispatchesToProcess(t *testing.T) {
 // TJ-01/AC2: a valid signature on an updated event dispatches to
 // sync.Process the same way as created (unified upsert).
 func TestReceive_ValidSignature_UpdatedEvent_DispatchesToProcess(t *testing.T) {
-	r, fake := newTestHandler(t)
+	t.Parallel()
+	r, fake := newTestHandler(t, &fakeJiraClient{})
 	body := []byte(updatedEnvelope)
 	sig := sign(t, testSecret, body)
 
@@ -186,7 +194,8 @@ func TestReceive_ValidSignature_UpdatedEvent_DispatchesToProcess(t *testing.T) {
 // TJ-01/AC2: a valid signature on a deleted event dispatches to
 // sync.ProcessDelete, not sync.Process.
 func TestReceive_ValidSignature_DeletedEvent_DispatchesToProcessDelete(t *testing.T) {
-	r, fake := newTestHandler(t)
+	t.Parallel()
+	r, fake := newTestHandler(t, &fakeJiraClient{})
 	body := []byte(deletedEnvelope)
 	sig := sign(t, testSecret, body)
 
@@ -206,7 +215,8 @@ func TestReceive_ValidSignature_DeletedEvent_DispatchesToProcessDelete(t *testin
 // AC2/Error Handling Strategy: an unrecognized event type is ignored with
 // 200 and no dispatch.
 func TestReceive_UnrecognizedEventType_Returns200NoDispatch(t *testing.T) {
-	r, fake := newTestHandler(t)
+	t.Parallel()
+	r, fake := newTestHandler(t, &fakeJiraClient{})
 	body := []byte(unrecognizedEnvelope)
 	sig := sign(t, testSecret, body)
 
@@ -223,7 +233,8 @@ func TestReceive_UnrecognizedEventType_Returns200NoDispatch(t *testing.T) {
 // Error Handling Strategy: a malformed envelope that nonetheless carries a
 // valid signature is ignored with 200, never a panic.
 func TestReceive_MalformedEnvelope_Returns200NoDispatch(t *testing.T) {
-	r, fake := newTestHandler(t)
+	t.Parallel()
+	r, fake := newTestHandler(t, &fakeJiraClient{})
 	body := []byte(malformedEnvelope)
 	sig := sign(t, testSecret, body)
 
@@ -240,7 +251,8 @@ func TestReceive_MalformedEnvelope_Returns200NoDispatch(t *testing.T) {
 // Error Handling Strategy: a malformed time-entry payload (valid envelope,
 // valid signature, recognized type) is ignored with 200, never a panic.
 func TestReceive_MalformedPayload_Returns200NoDispatch(t *testing.T) {
-	r, fake := newTestHandler(t)
+	t.Parallel()
+	r, fake := newTestHandler(t, &fakeJiraClient{})
 	body := []byte(malformedPayloadEnvelope)
 	sig := sign(t, testSecret, body)
 
@@ -257,17 +269,8 @@ func TestReceive_MalformedPayload_Returns200NoDispatch(t *testing.T) {
 // TJ-07/AC8: a transient JIRA failure surfaces as the non-2xx
 // Result.HTTPStatus, passed straight through to the HTTP response.
 func TestReceive_JiraLookupFails_ReturnsNon2xx(t *testing.T) {
-	gin.SetMode(gin.TestMode)
-	fake := &fakeJiraClientErr{err: &jira.TransientError{Err: context.DeadlineExceeded}}
-	meter := sdkmetric.NewMeterProvider().Meter("test")
-	metrics, err := telemetry.NewMetrics(meter)
-	if err != nil {
-		t.Fatalf("telemetry.NewMetrics() error = %v", err)
-	}
-	processor := sync.NewProcessor(fake, metrics, noop.NewTracerProvider().Tracer("test"), false)
-	h := NewHandler(testSecret, processor, slog.New(slog.NewTextHandler(io.Discard, nil)))
-	r := gin.New()
-	r.POST("/webhooks/toggl", h.Receive)
+	t.Parallel()
+	r, _ := newTestHandler(t, &fakeJiraClient{findErr: &jira.TransientError{Err: context.DeadlineExceeded}})
 
 	body := []byte(createdEnvelope)
 	sig := sign(t, testSecret, body)
@@ -279,18 +282,23 @@ func TestReceive_JiraLookupFails_ReturnsNon2xx(t *testing.T) {
 	}
 }
 
-// fakeJiraClientErr is a sync.JiraClient that always fails lookup, used to
-// exercise the transient-error → non-2xx passthrough without a live
-// network call.
-type fakeJiraClientErr struct{ err error }
+// A request body exceeding maxWebhookBodyBytes is rejected with 400.
+func TestReceive_BodyExceedsMaxSize_Returns400(t *testing.T) {
+	t.Parallel()
+	r, fake := newTestHandler(t, &fakeJiraClient{})
+	// Create a body larger than maxWebhookBodyBytes (1 << 20 = 1048576 bytes)
+	body := bytes.Repeat([]byte("a"), (1<<20)+1)
+	sig := sign(t, testSecret, body)
 
-func (f *fakeJiraClientErr) FindWorklogByTogglID(context.Context, string, string) (*jira.Worklog, error) {
-	return nil, f.err
+	w := post(t, r, body, sig)
+
+	if w.Code == 200 {
+		t.Errorf("status = %d, want non-200", w.Code)
+	}
+	if w.Code == 401 {
+		t.Errorf("status = %d (401), want non-401", w.Code)
+	}
+	if fake.totalCalls() != 0 {
+		t.Errorf("totalCalls = %d, want 0 (Processor must not be invoked)", fake.totalCalls())
+	}
 }
-func (f *fakeJiraClientErr) CreateWorklog(context.Context, string, jira.WorklogInput) (*jira.Worklog, error) {
-	return nil, nil
-}
-func (f *fakeJiraClientErr) UpdateWorklog(context.Context, string, string, jira.WorklogInput) error {
-	return nil
-}
-func (f *fakeJiraClientErr) DeleteWorklog(context.Context, string, string) error { return nil }

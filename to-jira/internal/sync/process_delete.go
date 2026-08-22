@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"net/http"
 
+	"go.opentelemetry.io/otel/attribute"
+
 	"github.com/flaviosv/toggl-integration/to-jira/internal/shared/logger"
 	"github.com/flaviosv/toggl-integration/to-jira/internal/toggl"
 )
@@ -25,7 +27,8 @@ func (p *Processor) ProcessDelete(ctx context.Context, env toggl.WebhookEnvelope
 		return Result{HTTPStatus: http.StatusOK, Outcome: OutcomeUnsupportedDelete}
 	}
 
-	e, _ := toggl.NormalizeEntry(payload)
+	e := toggl.NormalizeEntry(payload)
+	span.SetAttributes(attribute.String("toggl.id", e.TogglID))
 
 	issueKey, _, ok := toggl.ParseDescription(e.Description)
 	if !ok {
@@ -36,9 +39,7 @@ func (p *Processor) ProcessDelete(ctx context.Context, env toggl.WebhookEnvelope
 
 	existing, err := p.jira.FindWorklogByTogglID(ctx, issueKey, e.TogglID)
 	if err != nil {
-		logger.FromContext(ctx).Error("sync: jira lookup failed", "toggl_id", e.TogglID, "issue_key", issueKey, "error", err)
-		p.metrics.JiraAPIErrors.Add(ctx, 1)
-		return Result{HTTPStatus: http.StatusBadGateway, Outcome: OutcomeTransientError}
+		return p.jiraError(ctx, "sync: jira lookup failed", e.TogglID, issueKey, err)
 	}
 	if existing == nil {
 		return Result{HTTPStatus: http.StatusOK, Outcome: OutcomeNoop}
@@ -50,9 +51,7 @@ func (p *Processor) ProcessDelete(ctx context.Context, env toggl.WebhookEnvelope
 	}
 
 	if err := p.jira.DeleteWorklog(ctx, issueKey, existing.ID); err != nil {
-		logger.FromContext(ctx).Error("sync: jira delete failed", "toggl_id", e.TogglID, "issue_key", issueKey, "error", err)
-		p.metrics.JiraAPIErrors.Add(ctx, 1)
-		return Result{HTTPStatus: http.StatusBadGateway, Outcome: OutcomeTransientError}
+		return p.jiraError(ctx, "sync: jira delete failed", e.TogglID, issueKey, err)
 	}
 	p.metrics.WorklogsDeleted.Add(ctx, 1)
 	return Result{HTTPStatus: http.StatusOK, Outcome: OutcomeDeleted}

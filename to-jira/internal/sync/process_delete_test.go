@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"testing"
 
+	"go.opentelemetry.io/otel/attribute"
+
 	"github.com/flaviosv/toggl-integration/to-jira/internal/jira"
 	"github.com/flaviosv/toggl-integration/to-jira/internal/toggl"
 )
@@ -183,5 +185,35 @@ func TestProcessDelete_DryRun_NeverCallsDelete(t *testing.T) {
 	}
 	if got := counterValue(t, reader, "worklogs_deleted_total"); got != 0 {
 		t.Errorf("worklogs_deleted_total = %d, want 0 in dry-run", got)
+	}
+}
+
+// AC7: on success, ProcessDelete emits a trace span tagged with the TogglID.
+func TestProcessDelete_Success_EmitsSpanTaggedWithTogglID(t *testing.T) {
+	metrics, _ := newTestMetrics(t)
+	tracer, exporter := newRecordingTracer(t)
+	fake := &fakeJiraClient{findResult: &jira.Worklog{ID: "777"}}
+	p := NewProcessor(fake, metrics, tracer, false)
+	env := deleteEnvelope(t, 42, descPtr("[ABC-123] Did the thing"))
+
+	p.ProcessDelete(context.Background(), env)
+
+	spans := exporter.GetSpans()
+	if len(spans) != 1 {
+		t.Fatalf("got %d spans, want 1", len(spans))
+	}
+	if spans[0].Name != "sync.ProcessDelete" {
+		t.Errorf("span name = %q, want sync.ProcessDelete", spans[0].Name)
+	}
+	want := attribute.String("toggl.id", "42")
+	found := false
+	for _, attr := range spans[0].Attributes {
+		if attr == want {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Errorf("span attributes = %+v, want to include %v", spans[0].Attributes, want)
 	}
 }
