@@ -13,6 +13,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 
+	"github.com/flaviosv/toggl-integration/to-jira/internal/jira"
 	"github.com/flaviosv/toggl-integration/to-jira/internal/routes"
 	"github.com/flaviosv/toggl-integration/to-jira/internal/shared/config"
 	"github.com/flaviosv/toggl-integration/to-jira/internal/shared/di"
@@ -22,13 +23,14 @@ import (
 )
 
 const (
-	readHeaderTimeout = 5 * time.Second
-	readTimeout       = 20 * time.Second
-	writeTimeout      = 25 * time.Second
-	idleTimeout       = 60 * time.Second
-	maxHeaderBytes    = 1 << 20
-	shutdownGrace     = 10 * time.Second
-	logEnv            = "production"
+	readHeaderTimeout       = 5 * time.Second
+	readTimeout            = 20 * time.Second
+	writeTimeout           = 25 * time.Second
+	idleTimeout            = 60 * time.Second
+	maxHeaderBytes         = 1 << 20
+	shutdownGrace          = 10 * time.Second
+	telemetryShutdownGrace = 5 * time.Second
+	logEnv                 = "production"
 )
 
 func main() {
@@ -44,12 +46,12 @@ func main() {
 		log.Fatalf("telemetry: %v", err)
 	}
 
-	app, deps, err := buildApp(cfg, baseLogger)
+	app, _, err := buildApp(cfg, baseLogger)
 	if err != nil {
 		log.Fatalf("bootstrap: %v", err)
 	}
 
-	deps.WarnIfTokenExpiringSoon(cfg.Jira.APITokenExpires, baseLogger)
+	jira.WarnIfTokenExpiringSoon(cfg.Jira.APITokenExpires, baseLogger)
 
 	httpServer := buildServer(cfg, app)
 
@@ -60,7 +62,7 @@ func main() {
 
 	serverErr := server.Run(context.Background(), httpServer, sigCh, shutdownGrace, baseLogger)
 
-	shutdownCtx, cancel := context.WithTimeout(context.Background(), shutdownGrace)
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), telemetryShutdownGrace)
 	defer cancel()
 	if err := shutdownTelemetry(shutdownCtx); err != nil {
 		baseLogger.Error("telemetry shutdown failed", "error", err)
@@ -77,11 +79,12 @@ func buildApp(cfg *config.Config, baseLogger *slog.Logger) (*gin.Engine, *di.Dep
 		return nil, nil, fmt.Errorf("build dependencies: %w", err)
 	}
 
+	gin.SetMode(gin.ReleaseMode)
 	app := gin.New()
 	app.Use(gin.Recovery())
 
-	v1 := app.Group("/")
-	routes.Routes(v1, deps.Handlers.Webhook)
+	root := app.Group("/")
+	routes.Routes(root, deps.Handlers.Webhook)
 
 	return app, deps, nil
 }

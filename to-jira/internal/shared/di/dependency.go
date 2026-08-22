@@ -7,7 +7,6 @@ package di
 import (
 	"fmt"
 	"log/slog"
-	"time"
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/trace"
@@ -31,8 +30,6 @@ type Dependency struct {
 	clients   clients
 	Processor *sync.Processor
 	Handlers  handlers
-
-	buildOrder []string
 }
 
 type clients struct {
@@ -62,8 +59,6 @@ func BuildDependencies(cfg *config.Config, baseLogger *slog.Logger) (*Dependency
 }
 
 func (d *Dependency) buildTelemetry() error {
-	d.buildOrder = append(d.buildOrder, "telemetry")
-
 	metrics, err := newMetrics(telemetry.Meter())
 	if err != nil {
 		return fmt.Errorf("build telemetry: %w", err)
@@ -74,23 +69,13 @@ func (d *Dependency) buildTelemetry() error {
 }
 
 func (d *Dependency) buildClients(cfg *config.Config) {
-	d.buildOrder = append(d.buildOrder, "clients")
 	d.clients.jira = jira.NewClient(cfg.Jira.BaseURL, cfg.Jira.Email, cfg.Jira.APIToken, nil)
 }
 
 func (d *Dependency) buildProcessor(cfg *config.Config) {
-	d.buildOrder = append(d.buildOrder, "processor")
 	d.Processor = sync.NewProcessor(d.clients.jira, d.metrics, d.tracer, cfg.DryRun)
 }
 
 func (d *Dependency) buildHandlers(cfg *config.Config, baseLogger *slog.Logger) {
-	d.buildOrder = append(d.buildOrder, "handlers")
 	d.Handlers.Webhook = webhook.NewHandler(cfg.TogglWebhookSecret, d.Processor, baseLogger)
-}
-
-// WarnIfTokenExpiringSoon delegates to the wired JIRA client's own check
-// (TJ-15) — exposed here so main.go's startup sequence can trigger it
-// without reaching into di's unexported clients field.
-func (d *Dependency) WarnIfTokenExpiringSoon(configuredExpiry *time.Time, logger *slog.Logger) {
-	d.clients.jira.WarnIfTokenExpiringSoon(configuredExpiry, logger)
 }

@@ -1,11 +1,9 @@
 package di
 
 import (
-	"bytes"
 	"errors"
 	"io"
 	"log/slog"
-	"strings"
 	"testing"
 
 	"go.opentelemetry.io/otel/metric"
@@ -50,25 +48,6 @@ func TestBuildDependencies_WiresAllComponentsWithNoNilFields(t *testing.T) {
 	}
 	if d.clients.jira == nil {
 		t.Error("d.clients.jira = nil, want a wired *jira.Client")
-	}
-}
-
-// TJ-15: Dependency.WarnIfTokenExpiringSoon must delegate to the wired JIRA
-// client's own check, not just exist as dead code — main.go's startup
-// sequence relies on this to actually surface the reminder.
-func TestDependency_WarnIfTokenExpiringSoon_DelegatesToWiredClient(t *testing.T) {
-	var buf bytes.Buffer
-	logger := slog.New(slog.NewTextHandler(&buf, nil))
-
-	d, err := BuildDependencies(testConfig(), logger)
-	if err != nil {
-		t.Fatalf("BuildDependencies() error = %v, want nil", err)
-	}
-
-	d.WarnIfTokenExpiringSoon(nil, logger)
-
-	if !strings.Contains(buf.String(), "jira: API token expiry not tracked") {
-		t.Errorf("log output = %q, want it to contain the expiry-not-tracked note", buf.String())
 	}
 }
 

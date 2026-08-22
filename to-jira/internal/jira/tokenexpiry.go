@@ -13,7 +13,7 @@ const tokenExpiryWarnWindow = 14 * 24 * time.Hour
 // days (or already past), an informational note when configuredExpiry is
 // nil (expiry isn't being tracked), and nothing when it's comfortably far
 // away (TJ-15).
-func (c *Client) WarnIfTokenExpiringSoon(configuredExpiry *time.Time, logger *slog.Logger) {
+func WarnIfTokenExpiringSoon(configuredExpiry *time.Time, logger *slog.Logger) {
 	if configuredExpiry == nil {
 		logger.Info("jira: API token expiry not tracked (JIRA_API_TOKEN_EXPIRES_AT not set)")
 		return

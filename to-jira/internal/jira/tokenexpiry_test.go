@@ -18,8 +18,7 @@ func TestWarnIfTokenExpiringSoon_WarnsWithinWindow(t *testing.T) {
 	logger, buf := testLogger()
 	expiry := time.Now().Add(10 * 24 * time.Hour)
 
-	c := NewClient("https://example.atlassian.net", "user@example.com", "token", nil)
-	c.WarnIfTokenExpiringSoon(&expiry, logger)
+	WarnIfTokenExpiringSoon(&expiry, logger)
 
 	if !strings.Contains(buf.String(), "level=WARN") {
 		t.Errorf("log output = %q, want a level=WARN line", buf.String())
@@ -31,8 +30,7 @@ func TestWarnIfTokenExpiringSoon_WarnsWithinWindow(t *testing.T) {
 func TestWarnIfTokenExpiringSoon_NilExpiry_LogsInfo(t *testing.T) {
 	logger, buf := testLogger()
 
-	c := NewClient("https://example.atlassian.net", "user@example.com", "token", nil)
-	c.WarnIfTokenExpiringSoon(nil, logger)
+	WarnIfTokenExpiringSoon(nil, logger)
 
 	out := buf.String()
 	if !strings.Contains(out, "level=INFO") {
@@ -49,10 +47,22 @@ func TestWarnIfTokenExpiringSoon_FarAway_NoLog(t *testing.T) {
 	logger, buf := testLogger()
 	expiry := time.Now().Add(60 * 24 * time.Hour)
 
-	c := NewClient("https://example.atlassian.net", "user@example.com", "token", nil)
-	c.WarnIfTokenExpiringSoon(&expiry, logger)
+	WarnIfTokenExpiringSoon(&expiry, logger)
 
 	if buf.Len() != 0 {
 		t.Errorf("log output = %q, want no output", buf.String())
+	}
+}
+
+// WarnIfTokenExpiringSoon must log a warning when expiry has already
+// passed.
+func TestWarnIfTokenExpiringSoon_AlreadyPast_Warns(t *testing.T) {
+	logger, buf := testLogger()
+	expiry := time.Now().Add(-24 * time.Hour)
+
+	WarnIfTokenExpiringSoon(&expiry, logger)
+
+	if !strings.Contains(buf.String(), "level=WARN") {
+		t.Errorf("log output = %q, want a level=WARN line", buf.String())
 	}
 }
