@@ -8,7 +8,10 @@ import (
 	"io"
 	"net/http"
 	"strings"
+	"time"
 )
+
+const defaultClientTimeout = 15 * time.Second
 
 // Client is a JIRA Cloud REST API v3 client authenticated via HTTP Basic
 // Auth (email + API token).
@@ -22,7 +25,7 @@ type Client struct {
 // NewClient constructs a Client. hc defaults to http.DefaultClient when nil.
 func NewClient(baseURL, email, apiToken string, hc *http.Client) *Client {
 	if hc == nil {
-		hc = http.DefaultClient
+		hc = &http.Client{Timeout: defaultClientTimeout}
 	}
 	return &Client{
 		baseURL:    strings.TrimSuffix(baseURL, "/"),
