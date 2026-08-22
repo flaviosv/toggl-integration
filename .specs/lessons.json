@@ -1,0 +1,63 @@
+{
+  "schema": 1,
+  "promote_threshold": 2,
+  "window_days": 45,
+  "quarantine_threshold": 2,
+  "next_id": 4,
+  "lessons": [
+    {
+      "id": "L-001",
+      "key": "ac_gap::when a task implements a function required to run at startup or on a lifecycle hook verify the composition root main go di actually calls it a passing unit test on the function alone does not prove it s wired into the running service",
+      "text": "When a task implements a function required to run 'at startup' or on a lifecycle hook, verify the composition root (main.go/di) actually calls it — a passing unit test on the function alone does not prove it's wired into the running service.",
+      "signal": "ac_gap",
+      "scope": "wiring",
+      "status": "candidate",
+      "features": [
+        "to-jira"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "validation.md TJ-15 AC1/AC2 (wiring)"
+      ],
+      "created": "2026-08-22T21:37:36Z",
+      "last_seen": "2026-08-22T21:37:36Z"
+    },
+    {
+      "id": "L-002",
+      "key": "ac_gap::when an acceptance criterion names a specific documentation file to record a known limitation in treat that file update as part of the done when checklist not an implicit side effect of the code change",
+      "text": "When an acceptance criterion names a specific documentation file to record a known limitation in, treat that file update as part of the Done-when checklist, not an implicit side effect of the code change.",
+      "signal": "ac_gap",
+      "scope": "docs",
+      "status": "candidate",
+      "features": [
+        "to-jira"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "validation.md TJ-12/AC4 (docs)"
+      ],
+      "created": "2026-08-22T21:37:36Z",
+      "last_seen": "2026-08-22T21:37:36Z"
+    },
+    {
+      "id": "L-003",
+      "key": "spec_precision_gap::when an ac requires both a metric and a trace span for the same event use a real in memory span recorder in tests not a no op tracer so the span half of the requirement is actually asserted not just the metric half",
+      "text": "When an AC requires both a metric and a trace span for the same event, use a real in-memory span recorder in tests, not a no-op tracer, so the span half of the requirement is actually asserted, not just the metric half.",
+      "signal": "spec_precision_gap",
+      "scope": "telemetry",
+      "status": "candidate",
+      "features": [
+        "to-jira"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "validation.md TJ-14/AC7 span assertion (telemetry)"
+      ],
+      "created": "2026-08-22T21:37:36Z",
+      "last_seen": "2026-08-22T21:37:36Z"
+    }
+  ]
+}
