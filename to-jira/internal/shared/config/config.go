@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/go-playground/validator/v10"
@@ -56,6 +57,10 @@ func Load() (*Config, error) {
 	cfg.DryRun = parseBoolEnv("DRY_RUN", defaultDryRun, &errs)
 	cfg.OtelExporterOTLPEndpoint = os.Getenv("OTEL_EXPORTER_OTLP_ENDPOINT")
 	cfg.Port = parseIntEnv("PORT", defaultPort, &errs)
+
+	if cfg.Jira.BaseURL != "" && !strings.HasPrefix(cfg.Jira.BaseURL, "https://") {
+		errs = append(errs, fmt.Errorf("config: Jira.BaseURL must use https, got %q", cfg.Jira.BaseURL))
+	}
 
 	if len(errs) > 0 {
 		return nil, errors.Join(errs...)

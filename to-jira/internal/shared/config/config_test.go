@@ -96,8 +96,11 @@ func TestLoad(t *testing.T) {
 		// Malformed field: present but semantically invalid -> fails with a
 		// specific error naming the field, not a panic.
 		{name: "PORT non-numeric", setup: malformedEnv("PORT", "not-a-port"), wantErr: true, errField: "PORT"},
+		{name: "PORT out of range (0)", setup: malformedEnv("PORT", "0"), wantErr: true, errField: "Port"},
+		{name: "PORT out of range (70000)", setup: malformedEnv("PORT", "70000"), wantErr: true, errField: "Port"},
 		{name: "DRY_RUN non-boolean", setup: malformedEnv("DRY_RUN", "maybe"), wantErr: true, errField: "DRY_RUN"},
 		{name: "JIRA_API_TOKEN_EXPIRES_AT invalid date", setup: malformedEnv("JIRA_API_TOKEN_EXPIRES_AT", "not-a-date"), wantErr: true, errField: "JIRA_API_TOKEN_EXPIRES_AT"},
+		{name: "JIRA_BASE_URL not https", setup: malformedEnv("JIRA_BASE_URL", "http://example.atlassian.net"), wantErr: true, errField: "Jira.BaseURL"},
 
 		// Optional field absent -> documented default applied.
 		{name: "DryRun default", setup: optionalUnset, check: wantField(func(c *Config) any { return c.DryRun }, defaultDryRun)},
@@ -173,6 +176,7 @@ func optionalUnset(t *testing.T) {
 // equals want.
 func wantField(get func(*Config) any, want any) func(t *testing.T, cfg *Config) {
 	return func(t *testing.T, cfg *Config) {
+		t.Helper()
 		if got := get(cfg); got != want {
 			t.Errorf("field = %v, want %v", got, want)
 		}
