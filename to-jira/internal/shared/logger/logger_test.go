@@ -31,7 +31,7 @@ func TestInitialize_Production_UsesJSONHandler(t *testing.T) {
 		t.Errorf("JSON handler output does not start with '{': %q", output)
 	}
 
-	var parsed map[string]interface{}
+	var parsed map[string]any
 	if err := json.Unmarshal([]byte(output), &parsed); err != nil {
 		t.Errorf("JSON handler output is not valid JSON: %v", err)
 	}
@@ -60,7 +60,7 @@ func TestInitialize_NonProduction_UsesTextHandler(t *testing.T) {
 		t.Errorf("Text handler output unexpectedly starts with '{': %q", output)
 	}
 
-	var parsed map[string]interface{}
+	var parsed map[string]any
 	if err := json.Unmarshal([]byte(output), &parsed); err == nil {
 		t.Error("Text handler output unexpectedly parses as valid JSON")
 	}
