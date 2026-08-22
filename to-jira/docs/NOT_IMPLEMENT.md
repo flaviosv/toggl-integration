@@ -33,3 +33,15 @@ Edge cases and limitations deliberately deferred from v1, kept here instead of s
 **Actual impact**: In the unlikely event this happens, a duplicate worklog would need to be manually removed from JIRA.
 
 **What would close this**: A per-TogglID in-process mutex (or lock) serializing the lookup-then-write sequence — no persistence required, just request-level serialization. Revisit only if this is actually observed.
+
+## Toggl `time_entry.deleted` webhook payload shape is unverified
+
+**Scenario**: A `time_entry.deleted` event arrives, but Toggl's docs don't publish a concrete example of what fields the delete payload actually carries — unlike `created`/`updated`, which reliably include the full time entry.
+
+**Why it's not handled**: No live Toggl subscription exists yet to observe a real delete payload (the service isn't deployed). `ProcessDelete` and `NormalizeEntry` are built defensively against both plausible shapes: shape A, where `description` is still present (issue key derivable, delete proceeds normally); and shape B, where `description` is nil or the tagged format doesn't match (issue key not derivable). A payload matching shape B — or any payload whose description doesn't parse against the `[SLUG-NUM]` format — is logged as `unsupported_delete`, counted in `validation_errors_total`, and answered with HTTP 200 (not retried, since retrying won't produce more data).
+
+**Actual impact**: If the real payload turns out to match shape B, deletes silently never propagate to JIRA — the stale worklog is left behind on its issue with no automatic cleanup, and no error is ever surfaced (only the `unsupported_delete` count, which requires someone to notice the metric).
+
+**Workaround for now**: Manually delete the JIRA worklog when a Toggl entry is deleted, until the real payload shape is confirmed.
+
+**What would close this**: Fire a real test delete once the service is deployed with a live Toggl subscription, inspect the actual payload, and update `NormalizeEntry`/`ProcessDelete` if reality differs from both hypotheses (see design.md's Risks & Concerns — this is the documented pre-deployment manual verification step).

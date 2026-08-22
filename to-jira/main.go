@@ -44,10 +44,12 @@ func main() {
 		log.Fatalf("telemetry: %v", err)
 	}
 
-	app, err := buildApp(cfg, baseLogger)
+	app, deps, err := buildApp(cfg, baseLogger)
 	if err != nil {
 		log.Fatalf("bootstrap: %v", err)
 	}
+
+	deps.WarnIfTokenExpiringSoon(cfg.Jira.APITokenExpires, baseLogger)
 
 	httpServer := buildServer(cfg, app)
 
@@ -69,10 +71,10 @@ func main() {
 	}
 }
 
-func buildApp(cfg *config.Config, baseLogger *slog.Logger) (*gin.Engine, error) {
+func buildApp(cfg *config.Config, baseLogger *slog.Logger) (*gin.Engine, *di.Dependency, error) {
 	deps, err := di.BuildDependencies(cfg, baseLogger)
 	if err != nil {
-		return nil, fmt.Errorf("build dependencies: %w", err)
+		return nil, nil, fmt.Errorf("build dependencies: %w", err)
 	}
 
 	app := gin.New()
@@ -81,7 +83,7 @@ func buildApp(cfg *config.Config, baseLogger *slog.Logger) (*gin.Engine, error) 
 	v1 := app.Group("/")
 	routes.Routes(v1, deps.Handlers.Webhook)
 
-	return app, nil
+	return app, deps, nil
 }
 
 func buildServer(cfg *config.Config, handler http.Handler) *http.Server {

@@ -6,8 +6,11 @@ import (
 
 	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
+	"go.opentelemetry.io/otel/sdk/trace/tracetest"
 	"go.opentelemetry.io/otel/trace"
 	"go.opentelemetry.io/otel/trace/noop"
+
+	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 
 	"github.com/flaviosv/toggl-integration/to-jira/internal/shared/telemetry"
 )
@@ -56,4 +59,14 @@ func counterValue(t *testing.T, reader *sdkmetric.ManualReader, name string) int
 // don't assert on spans.
 func noopTracer() trace.Tracer {
 	return noop.NewTracerProvider().Tracer("test")
+}
+
+// newRecordingTracer returns a trace.Tracer backed by an in-memory exporter,
+// for the one test that asserts on the actual emitted span (AC7's
+// span-tagging requirement) rather than discarding it.
+func newRecordingTracer(t *testing.T) (trace.Tracer, *tracetest.InMemoryExporter) {
+	t.Helper()
+	exporter := tracetest.NewInMemoryExporter()
+	tp := sdktrace.NewTracerProvider(sdktrace.WithSyncer(exporter))
+	return tp.Tracer("test"), exporter
 }

@@ -5,6 +5,8 @@ import (
 	"testing"
 	"time"
 
+	"go.opentelemetry.io/otel/attribute"
+
 	"github.com/flaviosv/toggl-integration/to-jira/internal/jira"
 	"github.com/flaviosv/toggl-integration/to-jira/internal/toggl"
 )
@@ -212,6 +214,35 @@ func TestProcess_RepeatedDelivery_NeverDuplicates(t *testing.T) {
 	}
 	if fake.updateCalls != 2 {
 		t.Errorf("updateCalls = %d, want 2 (idempotent update, not duplicate create)", fake.updateCalls)
+	}
+}
+
+// AC7: on success, Process emits a trace span tagged with the TogglID.
+func TestProcess_Success_EmitsSpanTaggedWithTogglID(t *testing.T) {
+	metrics, _ := newTestMetrics(t)
+	tracer, exporter := newRecordingTracer(t)
+	fake := &fakeJiraClient{findResult: nil, createResult: &jira.Worklog{ID: "999"}}
+	p := NewProcessor(fake, metrics, tracer, false)
+
+	p.Process(context.Background(), completeEvent())
+
+	spans := exporter.GetSpans()
+	if len(spans) != 1 {
+		t.Fatalf("got %d spans, want 1", len(spans))
+	}
+	if spans[0].Name != "sync.Process" {
+		t.Errorf("span name = %q, want sync.Process", spans[0].Name)
+	}
+	want := attribute.String("toggl.id", "42")
+	found := false
+	for _, attr := range spans[0].Attributes {
+		if attr == want {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Errorf("span attributes = %+v, want to include %v", spans[0].Attributes, want)
 	}
 }
 

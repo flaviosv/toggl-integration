@@ -7,6 +7,7 @@ package di
 import (
 	"fmt"
 	"log/slog"
+	"time"
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/trace"
@@ -85,4 +86,11 @@ func (d *Dependency) buildProcessor(cfg *config.Config) {
 func (d *Dependency) buildHandlers(cfg *config.Config, baseLogger *slog.Logger) {
 	d.buildOrder = append(d.buildOrder, "handlers")
 	d.Handlers.Webhook = webhook.NewHandler(cfg.TogglWebhookSecret, d.Processor, baseLogger)
+}
+
+// WarnIfTokenExpiringSoon delegates to the wired JIRA client's own check
+// (TJ-15) — exposed here so main.go's startup sequence can trigger it
+// without reaching into di's unexported clients field.
+func (d *Dependency) WarnIfTokenExpiringSoon(configuredExpiry *time.Time, logger *slog.Logger) {
+	d.clients.jira.WarnIfTokenExpiringSoon(configuredExpiry, logger)
 }
