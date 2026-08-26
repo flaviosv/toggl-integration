@@ -7,7 +7,7 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "test": "npm run build && node --test 'dist/**/*.test.js'",
-    "generate:openapi": "echo \"generate:openapi placeholder - wired in a later task\""
+    "generate:openapi": "swagger2openapi openapi/toggl.swagger2.json --patch -o openapi/toggl.openapi3.json && openapi-typescript openapi/toggl.openapi3.json -o src/toggl/generated.ts"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.30.0",
