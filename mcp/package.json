@@ -6,7 +6,7 @@
   "description": "MCP server exposing Toggl time entries with ticket-code project auto-matching.",
   "scripts": {
     "build": "tsc -p tsconfig.json",
-    "test": "npm run build && node --test dist",
+    "test": "npm run build && node --test 'dist/**/*.test.js'",
     "generate:openapi": "echo \"generate:openapi placeholder - wired in a later task\""
   },
   "dependencies": {
