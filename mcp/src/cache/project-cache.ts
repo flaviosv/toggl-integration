@@ -1,0 +1,93 @@
+import fs from "node:fs/promises";
+import type { TogglClient, RawProject } from "../toggl/client.js";
+import type { CachedProject } from "../matching/match-project.js";
+import { log } from "../logger.js";
+
+export interface ProjectCacheFile {
+  fetchedAt: string;
+  projects: CachedProject[];
+}
+
+export interface StaleCacheWarning {
+  type: "stale_cache";
+  cacheAgeSeconds: number;
+  underlyingError: string;
+}
+
+export interface GetProjectsResult {
+  projects: CachedProject[];
+  warning?: StaleCacheWarning;
+}
+
+const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
+
+function toCachedProject(raw: RawProject): CachedProject {
+  return {
+    id: raw.id ?? 0,
+    name: raw.name ?? "",
+    active: raw.active ?? false,
+    workspaceId: raw.workspace_id ?? 0,
+  };
+}
+
+function errorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}
+
+async function readCache(cachePath: string): Promise<ProjectCacheFile | null> {
+  try {
+    const raw = await fs.readFile(cachePath, "utf8");
+    const parsed = JSON.parse(raw) as Partial<ProjectCacheFile>;
+    if (typeof parsed.fetchedAt !== "string" || !Array.isArray(parsed.projects)) {
+      return null;
+    }
+    return { fetchedAt: parsed.fetchedAt, projects: parsed.projects };
+  } catch {
+    return null;
+  }
+}
+
+async function writeCache(cachePath: string, file: ProjectCacheFile): Promise<void> {
+  const tmpPath = `${cachePath}.tmp-${process.pid}`;
+  try {
+    await fs.writeFile(tmpPath, JSON.stringify(file), "utf8");
+    await fs.rename(tmpPath, cachePath);
+  } catch (error) {
+    log("error", "failed to write project cache", { cachePath, error: errorMessage(error) });
+  }
+}
+
+export async function getProjects(
+  client: TogglClient,
+  cachePath: string,
+  opts?: { forceRefresh?: boolean },
+): Promise<GetProjectsResult> {
+  const cached = await readCache(cachePath);
+  const forceRefresh = opts?.forceRefresh ?? false;
+  const stale = cached === null || Date.now() - Date.parse(cached.fetchedAt) >= SEVEN_DAYS_MS;
+
+  if (!stale && !forceRefresh) {
+    return { projects: cached.projects };
+  }
+
+  let rawProjects: RawProject[];
+  try {
+    rawProjects = await client.listProjects();
+  } catch (error) {
+    if (cached !== null) {
+      return {
+        projects: cached.projects,
+        warning: {
+          type: "stale_cache",
+          cacheAgeSeconds: Math.floor((Date.now() - Date.parse(cached.fetchedAt)) / 1000),
+          underlyingError: errorMessage(error),
+        },
+      };
+    }
+    throw error;
+  }
+
+  const projects = rawProjects.map(toCachedProject);
+  await writeCache(cachePath, { fetchedAt: new Date().toISOString(), projects });
+  return { projects };
+}
