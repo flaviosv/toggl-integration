@@ -26,6 +26,14 @@
 - **Date**: 2026-08-22
 - **Status**: active
 
+### AD-004
+- **Decision**: TypeScript packages in this monorepo (starting with `mcp/`, the Time Entries MCP) default to: ESM (`"type": "module"`) with strict TypeScript and `NodeNext` module resolution; Node's built-in `fetch` for HTTP clients (hand-written thin wrappers, not generated runtime clients, when the endpoint surface is small); Node's built-in `node:test`/`node:assert` as the test runner (no Jest/Vitest); `zod` for runtime input validation; kebab-case filenames.
+- **Reason**: `to-jira` established a minimal-dependency, stdlib-first philosophy for Go; `mcp/` is this repo's first TypeScript package and needs an equivalent baseline so future TS packages don't each re-decide tooling from scratch. Chosen per `.specs/features/TOGGL-2-time-entries-mcp/design.md` Tech Decisions.
+- **Trade-off**: No test-framework ergonomics (snapshot testing, rich matchers) beyond what `node:assert` offers; acceptable at this scope, revisit if a future TS package's test needs outgrow it.
+- **Scope**: Any TypeScript package in this monorepo; conform or explicitly supersede with a new `AD-NNN`.
+- **Date**: 2026-08-26
+- **Status**: active
+
 ## Handoff
 
 - **Feature**: to-jira (`.specs/features/to-jira/`)
