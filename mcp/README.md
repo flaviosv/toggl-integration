@@ -108,3 +108,7 @@ Toggl allows **30 requests/hour** on this API. The server does not throttle, ret
 client-side — every tool call fires immediately. If Toggl returns `429`, the server passes it back
 to the agent as-is, including the `Retry-After` header when present, so the agent (or you) can
 decide whether to wait.
+
+Note: `GET /me/time_entries` returns entries across every workspace the account belongs to
+(not just the configured one), so the first request's payload size scales with all-workspace
+entry volume; non-matching entries are filtered out client-side after the fact.

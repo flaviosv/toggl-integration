@@ -34,14 +34,15 @@ test("list_time_entries issues exactly one Toggl request per call, regardless of
   try {
     const result = await client.callTool({
       name: "list_time_entries",
-      arguments: { start_date: "2000-01-01", end_date: "2026-12-31" },
+      arguments: { start_date: "2020-01-01", end_date: "2020-12-31" },
     });
     assert.equal(result.isError, undefined);
     assert.equal(fake.requests.length, 1);
-    assert.equal(fake.requests[0].url, "/me/time_entries?start_date=2000-01-01&end_date=2026-12-31");
+    assert.equal(fake.requests[0].url, "/me/time_entries?start_date=2020-01-01&end_date=2020-12-31");
   } finally {
     await close();
     await fake.close();
+    await fs.rm(path.dirname(cachePath), { recursive: true, force: true });
   }
 });
 
@@ -60,6 +61,7 @@ test("invalid start_date format is rejected before any Toggl request", async () 
   } finally {
     await close();
     await fake.close();
+    await fs.rm(path.dirname(cachePath), { recursive: true, force: true });
   }
 });
 
@@ -78,6 +80,7 @@ test("end_date before start_date is rejected before any Toggl request", async ()
   } finally {
     await close();
     await fake.close();
+    await fs.rm(path.dirname(cachePath), { recursive: true, force: true });
   }
 });
 
@@ -96,19 +99,20 @@ test("result entries carry exactly the five curated fields; foreign-workspace en
       name: "list_time_entries",
       arguments: { start_date: "2026-01-01", end_date: "2026-01-31" },
     });
-    const parsed = parseResult(result) as unknown[];
-    assert.equal(parsed.length, 1);
-    assert.deepEqual(parsed[0], {
+    const parsed = parseResult(result) as { entries: unknown[] };
+    assert.equal(parsed.entries.length, 1);
+    assert.deepEqual(parsed.entries[0], {
       id: 1,
       description: "mine",
       start: "2026-01-01T00:00:00Z",
       stop: "2026-01-01T01:00:00Z",
       project: null,
     });
-    assert.deepEqual(Object.keys(parsed[0] as object).sort(), ["description", "id", "project", "start", "stop"]);
+    assert.deepEqual(Object.keys(parsed.entries[0] as object).sort(), ["description", "id", "project", "start", "stop"]);
   } finally {
     await close();
     await fake.close();
+    await fs.rm(path.dirname(cachePath), { recursive: true, force: true });
   }
 });
 
@@ -123,7 +127,7 @@ test("an empty range returns a successful empty array, not an error", async () =
       arguments: { start_date: "2026-01-01", end_date: "2026-01-01" },
     });
     assert.equal(result.isError, undefined);
-    assert.deepEqual(parseResult(result), []);
+    assert.deepEqual(parseResult(result), { entries: [] });
   } finally {
     await close();
     await fake.close();
@@ -144,11 +148,12 @@ test("workspace_id param overrides TOGGL_WORKSPACE_ID for filtering", async () =
       name: "list_time_entries",
       arguments: { start_date: "2026-01-01", end_date: "2026-01-31", workspace_id: 55 },
     });
-    const parsed = parseResult(result) as unknown[];
-    assert.equal(parsed.length, 1);
+    const parsed = parseResult(result) as { entries: unknown[] };
+    assert.equal(parsed.entries.length, 1);
   } finally {
     await close();
     await fake.close();
+    await fs.rm(path.dirname(cachePath), { recursive: true, force: true });
   }
 });
 
@@ -167,8 +172,8 @@ test("entries with a project_id resolve project names via a pre-warmed cache, wi
       name: "list_time_entries",
       arguments: { start_date: "2026-01-01", end_date: "2026-01-31" },
     });
-    const parsed = parseResult(result) as { project: string | null }[];
-    assert.equal(parsed[0].project, "[TOGGL-1] Alpha");
+    const parsed = parseResult(result) as { entries: { project: string | null }[] };
+    assert.equal(parsed.entries[0].project, "[TOGGL-1] Alpha");
     assert.equal(fake.requests.length, 1);
   } finally {
     await close();
@@ -194,5 +199,161 @@ test("Toggl 500 error is surfaced as a structured error, not a crash", async () 
   } finally {
     await close();
     await fake.close();
+    await fs.rm(path.dirname(cachePath), { recursive: true, force: true });
+  }
+});
+
+test("date range exceeding 366 days is rejected before any Toggl request", async () => {
+  const fake = await startFakeToggl((_req, res) => sendJson(res, 200, []));
+  const cachePath = makeTmpCachePath();
+  const deps = makeDeps(fake, cachePath);
+  const { client, close } = await connectToolClient([registerListTimeEntries], deps);
+  try {
+    const result = await client.callTool({
+      name: "list_time_entries",
+      arguments: { start_date: "2026-01-01", end_date: "2027-12-31" },
+    });
+    assert.equal(result.isError, true);
+    assert.equal(fake.requests.length, 0);
+  } finally {
+    await close();
+    await fake.close();
+    await fs.rm(path.dirname(cachePath), { recursive: true, force: true });
+  }
+});
+
+test("invalid workspace_id is rejected before any Toggl request", async () => {
+  const fake = await startFakeToggl((_req, res) => sendJson(res, 200, []));
+  const cachePath = makeTmpCachePath();
+  const deps = makeDeps(fake, cachePath);
+  const { client, close } = await connectToolClient([registerListTimeEntries], deps);
+  try {
+    const result = await client.callTool({
+      name: "list_time_entries",
+      arguments: { start_date: "2026-01-01", end_date: "2026-01-31", workspace_id: 0 },
+    });
+    assert.equal(result.isError, true);
+    assert.equal(fake.requests.length, 0);
+  } finally {
+    await close();
+    await fake.close();
+    await fs.rm(path.dirname(cachePath), { recursive: true, force: true });
+  }
+});
+
+test("time entries fetched with no pre-written cache, projects resolved from fresh fetch, exactly two requests", async () => {
+  let requestCount = 0;
+  const fake = await startFakeToggl((_req, res) => {
+    requestCount += 1;
+    if (requestCount === 1) {
+      sendJson(res, 200, [
+        { id: 1, description: "task", start: "2026-01-01T00:00:00Z", stop: "2026-01-01T01:00:00Z", workspace_id: 99, project_id: 7 },
+      ]);
+    } else {
+      sendJson(res, 200, [{ id: 7, name: "Project Seven", active: true, workspace_id: 99 }]);
+    }
+  });
+  const cachePath = makeTmpCachePath();
+  const deps = makeDeps(fake, cachePath);
+  const { client, close } = await connectToolClient([registerListTimeEntries], deps);
+  try {
+    const result = await client.callTool({
+      name: "list_time_entries",
+      arguments: { start_date: "2026-01-01", end_date: "2026-01-31" },
+    });
+    assert.equal(result.isError, undefined);
+    const parsed = parseResult(result) as { entries: { project: string | null }[] };
+    assert.equal(parsed.entries[0].project, "Project Seven");
+    assert.equal(fake.requests.length, 2);
+  } finally {
+    await close();
+    await fake.close();
+    await fs.rm(path.dirname(cachePath), { recursive: true, force: true });
+  }
+});
+
+test("when listTimeEntries succeeds but projects fetch fails, error is returned", async () => {
+  let requestCount = 0;
+  const fake = await startFakeToggl((_req, res) => {
+    requestCount += 1;
+    if (requestCount === 1) {
+      sendJson(res, 200, [
+        { id: 1, description: "task", start: "2026-01-01T00:00:00Z", stop: "2026-01-01T01:00:00Z", workspace_id: 99, project_id: 7 },
+      ]);
+    } else {
+      sendJson(res, 500, { error: "projects unavailable" });
+    }
+  });
+  const cachePath = makeTmpCachePath();
+  const deps = makeDeps(fake, cachePath);
+  const { client, close } = await connectToolClient([registerListTimeEntries], deps);
+  try {
+    const result = await client.callTool({
+      name: "list_time_entries",
+      arguments: { start_date: "2026-01-01", end_date: "2026-01-31" },
+    });
+    assert.equal(result.isError, true);
+    const parsed = parseResult(result) as { error: { type: string } };
+    assert.equal(parsed.error.type, "toggl_api");
+  } finally {
+    await close();
+    await fake.close();
+    await fs.rm(path.dirname(cachePath), { recursive: true, force: true });
+  }
+});
+
+test("stale cache with failed refresh returns entries with stale_cache warning", async () => {
+  const fake = await startFakeToggl((_req, res) => {
+    if (new URL((_req.url ?? ""), "http://localhost").pathname === "/me/time_entries") {
+      sendJson(res, 200, [
+        { id: 1, description: "task", start: "2026-01-01T00:00:00Z", stop: "2026-01-01T01:00:00Z", workspace_id: 99, project_id: 7 },
+      ]);
+    } else {
+      sendJson(res, 500, { error: "projects unavailable" });
+    }
+  });
+  const cachePath = makeTmpCachePath();
+  const eightDaysAgo = new Date(Date.now() - 8 * 24 * 60 * 60 * 1000).toISOString();
+  writeProjectCache(cachePath, [{ id: 7, name: "Project Seven", active: true, workspaceId: 99 }], eightDaysAgo);
+  const deps = makeDeps(fake, cachePath);
+  const { client, close } = await connectToolClient([registerListTimeEntries], deps);
+  try {
+    const result = await client.callTool({
+      name: "list_time_entries",
+      arguments: { start_date: "2026-01-01", end_date: "2026-01-31" },
+    });
+    assert.equal(result.isError, undefined);
+    const parsed = parseResult(result) as { entries: { project: string | null }[]; warnings?: unknown[] };
+    assert.equal(parsed.entries[0].project, "Project Seven");
+    assert.ok(parsed.warnings);
+    assert.equal(parsed.warnings.length, 1);
+    const warning = parsed.warnings[0] as { type: string };
+    assert.equal(warning.type, "stale_cache");
+  } finally {
+    await close();
+    await fake.close();
+    await fs.rm(path.dirname(cachePath), { recursive: true, force: true });
+  }
+});
+
+test("network error during time entries fetch is surfaced as network error type", async () => {
+  const fake = await startFakeToggl((req, res) => {
+    req.socket.destroy();
+  });
+  const cachePath = makeTmpCachePath();
+  const deps = makeDeps(fake, cachePath);
+  const { client, close } = await connectToolClient([registerListTimeEntries], deps);
+  try {
+    const result = await client.callTool({
+      name: "list_time_entries",
+      arguments: { start_date: "2026-01-01", end_date: "2026-01-31" },
+    });
+    assert.equal(result.isError, true);
+    const parsed = parseResult(result) as { error: { type: string } };
+    assert.equal(parsed.error.type, "network");
+  } finally {
+    await close();
+    await fake.close();
+    await fs.rm(path.dirname(cachePath), { recursive: true, force: true });
   }
 });
