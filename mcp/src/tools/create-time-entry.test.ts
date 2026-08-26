@@ -48,7 +48,7 @@ test("invalid start (bad RFC3339) is rejected before any Toggl request", async (
   }
 });
 
-test("stop not strictly after start is rejected before any Toggl request", async () => {
+test("stop not strictly after start is rejected before any Toggl request, and the error names the offending field (TEM-24 AC5)", async () => {
   const fake = await startFakeToggl((_req, res) => sendJson(res, 200, {}));
   const cachePath = makeTmpCachePath();
   const deps = makeDeps(fake, cachePath);
@@ -57,6 +57,46 @@ test("stop not strictly after start is rejected before any Toggl request", async
     const result = await client.callTool({
       name: "create_time_entry",
       arguments: { description: "work", start: "2026-01-01T02:00:00Z", stop: "2026-01-01T02:00:00Z" },
+    });
+    assert.equal(result.isError, true);
+    assert.equal(fake.requests.length, 0);
+    const text = (result.content as { type: string; text: string }[])[0].text;
+    assert.match(text, /stop/);
+  } finally {
+    await close();
+    await fake.close();
+  }
+});
+
+test("omitted description is rejected before any Toggl request (TEM-18 AC1)", async () => {
+  const fake = await startFakeToggl((_req, res) => sendJson(res, 200, {}));
+  const cachePath = makeTmpCachePath();
+  const deps = makeDeps(fake, cachePath);
+  const { client, close } = await connectToolClient([registerCreateTimeEntry], deps);
+  try {
+    const result = await client.callTool({
+      name: "create_time_entry",
+      arguments: { start: "2026-01-01T02:00:00Z", stop: "2026-01-01T03:00:00Z" },
+    });
+    assert.equal(result.isError, true);
+    assert.equal(fake.requests.length, 0);
+    const text = (result.content as { type: string; text: string }[])[0].text;
+    assert.match(text, /description/);
+  } finally {
+    await close();
+    await fake.close();
+  }
+});
+
+test("invalid stop (bad RFC3339 format) is rejected before any Toggl request (TEM-18 AC2 symmetry with start)", async () => {
+  const fake = await startFakeToggl((_req, res) => sendJson(res, 200, {}));
+  const cachePath = makeTmpCachePath();
+  const deps = makeDeps(fake, cachePath);
+  const { client, close } = await connectToolClient([registerCreateTimeEntry], deps);
+  try {
+    const result = await client.callTool({
+      name: "create_time_entry",
+      arguments: { description: "work", start: "2026-01-01T02:00:00Z", stop: "not-a-timestamp" },
     });
     assert.equal(result.isError, true);
     assert.equal(fake.requests.length, 0);

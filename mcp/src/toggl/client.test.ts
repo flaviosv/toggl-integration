@@ -216,6 +216,35 @@ test("other non-2xx (500) response throws TogglApiError with status, method, pat
   }
 });
 
+test("a TogglApiError's own message/fields never carry the API token's value (TEM-01/02 AC3) — only status/method/path/body, never headers", async () => {
+  const secretToken = "tok-leak-canary-8827f1";
+  const fake = await startFakeServer((_req, res) => {
+    sendJson(res, 500, { error: "boom" });
+  });
+  try {
+    const client = new TogglClient({ apiToken: secretToken, baseUrl: fake.baseUrl });
+    await assert.rejects(
+      () => client.listProjects(),
+      (err: unknown) => {
+        assert.ok(err instanceof TogglApiError);
+        assert.equal(Object.keys(err).includes("headers"), false);
+        assert.equal("authorization" in err, false);
+        const serialized = JSON.stringify({
+          message: err.message,
+          status: err.status,
+          method: err.method,
+          path: err.path,
+          body: err.body,
+        });
+        assert.equal(serialized.includes(secretToken), false);
+        return true;
+      },
+    );
+  } finally {
+    await fake.close();
+  }
+});
+
 test("404 sets isError-relevant fields but does NOT set retryAfter (absent, not undefined)", async () => {
   const fake = await startFakeServer((_req, res) => {
     sendJson(res, 404, { error: "gone" });

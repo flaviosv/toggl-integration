@@ -76,3 +76,15 @@ test("valid env produces a Config with no error thrown", () => {
     cachePath: path.join(os.homedir(), ".cache", "toggl-mcp", "projects.json"),
   });
 });
+
+test("a ConfigError raised alongside a present TOGGL_API_TOKEN never includes the token's value (TEM-01/02 AC3)", () => {
+  const secretToken = "sk-super-secret-toggl-token-value-9f31";
+  const env = { TOGGL_API_TOKEN: secretToken, TOGGL_WORKSPACE_ID: "not-a-number" };
+  assert.throws(
+    () => loadConfig(env),
+    (err: unknown) =>
+      err instanceof ConfigError &&
+      /TOGGL_WORKSPACE_ID/.test((err as Error).message) &&
+      !(err as Error).message.includes(secretToken),
+  );
+});
