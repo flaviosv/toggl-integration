@@ -3,7 +3,7 @@ import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import { loadConfig, ConfigError } from "./config.js";
 import { TogglClient } from "./toggl/client.js";
 import { log } from "./logger.js";
-import type { ToolDeps } from "./tools/schemas.js";
+import type { ToolDeps } from "./tools/deps.js";
 import { registerListTimeEntries } from "./tools/list-time-entries.js";
 
 async function main(): Promise<void> {

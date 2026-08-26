@@ -1,6 +1,4 @@
 import { z } from "zod";
-import type { TogglClient } from "../toggl/client.js";
-import type { Config } from "../config.js";
 
 const RFC3339_PATTERN = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:\d{2})$/;
 const DATE_ONLY_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
@@ -18,10 +16,4 @@ export const positiveId = z.number().int().positive();
 
 export function toEpochMillis(value: string): number {
   return Date.parse(value);
-}
-
-export interface ToolDeps {
-  client: TogglClient;
-  cachePath: string;
-  config: Config;
 }

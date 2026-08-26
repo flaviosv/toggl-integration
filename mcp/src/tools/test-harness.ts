@@ -6,7 +6,7 @@ import type { AddressInfo } from "node:net";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
-import type { ToolDeps } from "./schemas.js";
+import type { ToolDeps } from "./deps.js";
 
 export interface RecordedRequest {
   method: string;

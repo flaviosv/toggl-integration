@@ -1,7 +1,8 @@
 import { z } from "zod";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
-import { dateOrTimestamp, positiveId, toEpochMillis, type ToolDeps } from "./schemas.js";
+import { dateOrTimestamp, positiveId, toEpochMillis } from "./schemas.js";
+import type { ToolDeps } from "./deps.js";
 import { getProjects } from "../cache/project-cache.js";
 import { toCuratedEntry } from "../time-entries/curate.js";
 import { toErrorResult } from "../errors.js";

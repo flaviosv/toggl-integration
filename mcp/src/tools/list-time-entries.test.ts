@@ -14,7 +14,7 @@ import {
   writeProjectCache,
   type FakeTogglServer,
 } from "./test-harness.js";
-import type { ToolDeps } from "./schemas.js";
+import type { ToolDeps } from "./deps.js";
 
 function makeDeps(fake: FakeTogglServer, cachePath: string): ToolDeps {
   const client = new TogglClient({ apiToken: "tok", baseUrl: fake.baseUrl });
