@@ -1,5 +1,9 @@
 # Architecture
 
+This monorepo holds two independent packages with unrelated architectures — nothing below this
+note through **API Versioning** describes `to-jira` only. `mcp`'s architecture is summarized in
+**`mcp` — Overview** near the end of this file, with full depth in `mcp/CLAUDE.md`.
+
 ## Overview / Pattern
 
 `to-jira` is a single-process, stateless webhook service: a synchronous inbound HTTP endpoint drives a flat, layered pipeline (parse → validate → look up → write) against one outbound REST dependency (JIRA). There is no persistence layer, no queue, and no background worker — every request is handled start-to-finish within the same webhook delivery.
@@ -118,3 +122,26 @@ None. The service exposes a single fixed route (`POST /webhooks/toggl`); JIRA's 
 - **Interface-at-the-consumer seam for testability**: `sync.JiraClient` is defined in `internal/sync` (the consumer), not `internal/jira` (the implementer), so tests can fake it without touching the real client — the project's stated hard constraint is no live network calls in tests.
 - **Idempotent upsert instead of separate create/update handling**: `time_entry.created` and `time_entry.updated` are unified into one lookup-then-create-or-update path, making duplicate delivery and out-of-order events non-issues by construction rather than by deduplication logic.
 - **Swappable package-level function for failure injection**: `di.newMetrics` is a package variable defaulting to `telemetry.NewMetrics`, overridable in tests to force a build failure — mirrors the same idiom in the sibling reference projects.
+
+## `mcp` — Overview
+
+`mcp` (package `toggl-mcp`) is a single-process, stateless MCP server over stdio — no HTTP surface,
+no queue, no background worker. `src/index.ts` loads config, builds a `TogglClient`, registers the
+one tool (`list_time_entries`) on an `McpServer`, and connects a `StdioServerTransport`; the process
+lives only as long as the MCP client's child-process session.
+
+Request flow: MCP client calls `list_time_entries` → Zod input validation (`tools/schemas.ts`) →
+`TogglClient.listTimeEntries` (`GET /me/time_entries`) → client-side workspace filter → if any
+filtered entry has a `project_id`, `cache/project-cache.getProjects` resolves names (7-day TTL disk
+cache, live `GET /me/projects` on miss/stale, stale-cache-plus-warning fallback on refetch failure)
+→ `time-entries/curate.toCuratedEntry` maps to the output shape → JSON result over stdio.
+
+Error handling mirrors `to-jira`'s intent but not its mechanism: Toggl call failures
+(`TogglApiError`/`TogglNetworkError`) are logged to stderr and converted to a structured
+`CallToolResult` with `isError: true` (`errors.ts`) rather than an HTTP status; anything else
+propagates as an MCP protocol-level error, signaling a genuine bug rather than an expected failure.
+Observability is a single stderr-only JSON line logger (`logger.ts`) — no OTel, no metrics, no
+tracing (the package's scope excludes them; see `mcp/CLAUDE.md`'s Constraints).
+
+Full architecture (Mermaid diagram, component table, data model, testing strategy, and the read-only
+scope-reduction history) lives in `mcp/CLAUDE.md` — not duplicated here.
