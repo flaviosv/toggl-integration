@@ -10,6 +10,8 @@ import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js"
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ENTRY_POINT = path.join(__dirname, "index.js");
+const MCP_ROOT = path.join(__dirname, "..");
+const ENV_FILE_PATH = path.join(MCP_ROOT, ".env");
 
 function tmpCachePath(): string {
   const dir = fsSync.mkdtempSync(path.join(os.tmpdir(), "toggl-mcp-bootstrap-"));
@@ -81,5 +83,33 @@ test("valid env: successful MCP handshake and a tool list of exactly the 1 regis
     assert.deepEqual(names, ["list_time_entries"]);
   } finally {
     await client.close();
+  }
+});
+
+test(".env file loading: credentials from .env file (not passed via env) enable successful handshake", async () => {
+  const envContent = `TOGGL_API_TOKEN=env-file-token\nTOGGL_WORKSPACE_ID=88\n`;
+  const cachePath = tmpCachePath();
+  fsSync.writeFileSync(ENV_FILE_PATH, envContent, "utf8");
+
+  try {
+    const transport = new StdioClientTransport({
+      command: process.execPath,
+      args: [ENTRY_POINT],
+      env: {
+        PATH: process.env.PATH ?? "",
+        TOGGL_CACHE_PATH: cachePath,
+      },
+    });
+    const client = new Client({ name: "env-file-test-client", version: "0.0.0" });
+    try {
+      await client.connect(transport);
+      const { tools } = await client.listTools();
+      const names = tools.map((t) => t.name).sort();
+      assert.deepEqual(names, ["list_time_entries"]);
+    } finally {
+      await client.close();
+    }
+  } finally {
+    fsSync.rmSync(ENV_FILE_PATH, { force: true });
   }
 });

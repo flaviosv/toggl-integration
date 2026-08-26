@@ -1,3 +1,6 @@
+import { fileURLToPath } from "node:url";
+import path from "node:path";
+import dotenv from "dotenv";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { loadConfig, ConfigError } from "./config.js";
@@ -5,6 +8,8 @@ import { TogglClient } from "./toggl/client.js";
 import { log } from "./logger.js";
 import type { ToolDeps } from "./tools/deps.js";
 import { registerListTimeEntries } from "./tools/list-time-entries.js";
+
+dotenv.config({ path: path.join(path.dirname(fileURLToPath(import.meta.url)), "..", ".env"), quiet: true });
 
 async function main(): Promise<void> {
   let config;
