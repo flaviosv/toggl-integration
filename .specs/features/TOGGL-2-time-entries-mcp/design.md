@@ -13,18 +13,15 @@
 
 ## Architecture Overview
 
-One flat TypeScript package, `mcp/`, sibling to `to-jira/` (no npm workspaces, per Out of Scope). A single stdio MCP server process registers 6 tools. Every tool handler is a thin orchestration over three collaborators: a hand-written Toggl fetch client, a local JSON project cache, and a pure matching function. No framework, no DI container — one `index.ts` builds the collaborators once and closes over them when registering tools.
+One flat TypeScript package, `mcp/`, sibling to `to-jira/` (no npm workspaces, per Out of Scope). A single stdio MCP server process registers 1 tool (`list_time_entries`). The tool handler is a thin orchestration over two collaborators: a hand-written Toggl fetch client and a local JSON project cache. No framework, no DI container — one `index.ts` builds the collaborators once and closes over them when registering the tool.
 
 ```mermaid
 graph TD
     A[MCP Client / Claude] -- stdio --> B[McpServer]
-    B --> T1[list/get/create/update/delete_time_entry]
-    B --> T2[refresh_projects]
-    T1 --> M[match-project]
+    B --> T1[list_time_entries]
     T1 --> C[TogglClient]
-    T2 --> P[ProjectCache]
-    M --> P
-    P -- read/write --> F[(projects.json)]
+    T1 --> P[ProjectCache]
+    P -- read --> F[(projects.json)]
     C -- HTTPS Basic Auth --> G[Toggl API v9]
 ```
 
