@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { toErrorResult } from "./errors.js";
 import { TogglApiError, TogglNetworkError } from "./toggl/client.js";
 
+// Shared fixture-validity precondition: all tests in this file expect toErrorResult to produce a single text-content item.
 function parse(result: ReturnType<typeof toErrorResult>): unknown {
   assert.equal(result.content.length, 1);
   const item = result.content[0] as { type: string; text: string };
