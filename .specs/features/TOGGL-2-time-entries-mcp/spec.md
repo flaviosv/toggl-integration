@@ -229,30 +229,30 @@ Every ambiguity is resolved or recorded here — nothing is left silently unclea
 
 | Requirement ID | Story | Phase | Status |
 | --- | --- | --- | --- |
-| TEM-01 | P1: Configuration — required env vars validated at startup | Design | Pending |
-| TEM-02 | P1: Configuration — Basic Auth with `api_token`, token never logged, `.env.sample` committed | Design | Pending |
-| TEM-03 | P1: Read — date range in exactly one API call | Design | Pending |
-| TEM-04 | P1: Read — date/range input validation | Design | Pending |
-| TEM-05 | P1: Read — curated five-field output shape | Design | Pending |
-| TEM-06 | P1: Read — client-side workspace filtering; empty range is success | Design | Pending |
-| TEM-07 | P1: Read — get single entry, not-found is a structured error | Design | Pending |
-| TEM-08 | P1: Cache — fetch-and-persist projects on miss | Design | Pending |
-| TEM-09 | P1: Cache — 7-day TTL; `refresh_projects` forces refresh | Design | Pending |
-| TEM-10 | P1: Cache — corrupt/unreadable cache degrades to a miss, never crashes | Design | Pending |
-| TEM-11 | P1: Cache — unwritable cache still serves from memory | Design | Pending |
-| TEM-12 | P1: Cache — stale-cache fallback with `stale_cache` warning; hard error when no cache exists | Design | Pending |
-| TEM-13 | P1: Matching — extract code via `to-jira`'s `[SLUG-NUMBER]` pattern | Design | Pending |
-| TEM-14 | P1: Matching — strip `[...]` prefix, exact case-insensitive equality, active projects only | Design | Pending |
-| TEM-15 | P1: Matching — zero or multiple matches ⇒ structured error listing candidates, no write | Design | Pending |
-| TEM-16 | P1: Matching — explicit `project_id` bypasses matching and the cache | Design | Pending |
-| TEM-17 | P1: Matching — untagged description ⇒ no project, reported as `project: null` | Design | Pending |
-| TEM-18 | P1: Create — input contract and RFC3339 / start-before-stop validation | Design | Pending |
-| TEM-19 | P1: Create — single `POST` with resolved project, duration, `created_with` | Design | Pending |
-| TEM-20 | P1: Create — workspace default with per-call override | Design | Pending |
-| TEM-21 | P1: Update — read-modify-write preserves omitted fields | Design | Pending |
-| TEM-22 | P1: Update — re-match project on description change only | Design | Pending |
-| TEM-23 | P1: Delete — single delete; not-found is a structured error | Design | Pending |
-| TEM-24 | P1: Errors — `429` and non-2xx surfaced verbatim; no retry/throttle; stderr-only logging; schema validation before any request | Design | Pending |
+| TEM-01 | P1: Configuration — required env vars validated at startup | Design | Implementing |
+| TEM-02 | P1: Configuration — Basic Auth with `api_token`, token never logged, `.env.sample` committed | Design | Implementing |
+| TEM-03 | P1: Read — date range in exactly one API call | Design | Implementing |
+| TEM-04 | P1: Read — date/range input validation | Design | Implementing |
+| TEM-05 | P1: Read — curated five-field output shape | Design | Implementing |
+| TEM-06 | P1: Read — client-side workspace filtering; empty range is success | Design | Implementing |
+| TEM-07 | P1: Read — get single entry, not-found is a structured error | Design | Implementing |
+| TEM-08 | P1: Cache — fetch-and-persist projects on miss | Design | Implementing |
+| TEM-09 | P1: Cache — 7-day TTL; `refresh_projects` forces refresh | Design | Implementing |
+| TEM-10 | P1: Cache — corrupt/unreadable cache degrades to a miss, never crashes | Design | Implementing |
+| TEM-11 | P1: Cache — unwritable cache still serves from memory | Design | Implementing |
+| TEM-12 | P1: Cache — stale-cache fallback with `stale_cache` warning; hard error when no cache exists | Design | Implementing |
+| TEM-13 | P1: Matching — extract code via `to-jira`'s `[SLUG-NUMBER]` pattern | Design | Implementing |
+| TEM-14 | P1: Matching — strip `[...]` prefix, exact case-insensitive equality, active projects only | Design | Implementing |
+| TEM-15 | P1: Matching — zero or multiple matches ⇒ structured error listing candidates, no write | Design | Implementing |
+| TEM-16 | P1: Matching — explicit `project_id` bypasses matching and the cache | Design | Implementing |
+| TEM-17 | P1: Matching — untagged description ⇒ no project, reported as `project: null` | Design | Implementing |
+| TEM-18 | P1: Create — input contract and RFC3339 / start-before-stop validation | Design | Implementing |
+| TEM-19 | P1: Create — single `POST` with resolved project, duration, `created_with` | Design | Implementing |
+| TEM-20 | P1: Create — workspace default with per-call override | Design | Implementing |
+| TEM-21 | P1: Update — read-modify-write preserves omitted fields | Design | Implementing |
+| TEM-22 | P1: Update — re-match project on description change only | Design | Implementing |
+| TEM-23 | P1: Delete — single delete; not-found is a structured error | Design | Implementing |
+| TEM-24 | P1: Errors — `429` and non-2xx surfaced verbatim; no retry/throttle; stderr-only logging; schema validation before any request | Design | Implementing |
 
 **ID format:** `TEM-NN`
 

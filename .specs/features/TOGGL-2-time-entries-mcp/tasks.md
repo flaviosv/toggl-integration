@@ -83,10 +83,10 @@ T10 → T11 → T12 → T13 → T14 → T15
 
 **Done when**:
 
-- [ ] `npm install` succeeds inside `mcp/`
-- [ ] `npm run build` succeeds on the empty `src/` (add a placeholder `src/index.ts` exporting nothing, deleted/replaced by T15)
-- [ ] `.env.sample` lists exactly `TOGGL_API_TOKEN`, `TOGGL_WORKSPACE_ID`, `TOGGL_CACHE_PATH` with placeholders
-- [ ] `.gitignore` excludes `.env`, `dist/`, `node_modules/`
+- [x] `npm install` succeeds inside `mcp/`
+- [x] `npm run build` succeeds on the empty `src/` (add a placeholder `src/index.ts` exporting nothing, deleted/replaced by T15)
+- [x] `.env.sample` lists exactly `TOGGL_API_TOKEN`, `TOGGL_WORKSPACE_ID`, `TOGGL_CACHE_PATH` with placeholders
+- [x] `.gitignore` excludes `.env`, `dist/`, `node_modules/`
 
 **Tests**: none
 **Gate**: build
@@ -110,11 +110,11 @@ T10 → T11 → T12 → T13 → T14 → T15
 
 **Done when**:
 
-- [ ] `extractTicketCode` returns the code for `[JSP-10] Creating form`, returns the code (empty trailing group) for `[JSP-10]`, returns `null` for `Fixing [JSP-10] today` and for `[jsp-10] x`
-- [ ] `resolveProject` strips a leading `[...]` prefix and matches case-insensitively; a project named exactly `[teachmeto.ai]` never matches any code
-- [ ] `resolveProject` filters to `active && workspaceId === target` before matching, returns `"matched"` on exactly one hit, `"ambiguous"` listing all matches on >1, `"no_match"` listing all active candidates on 0
-- [ ] Gate passes: `npm test`
-- [ ] Test count: ≥10 (covers every Edge Cases bullet plus TEM-14/15/16 branches)
+- [x] `extractTicketCode` returns the code for `[JSP-10] Creating form`, returns the code (empty trailing group) for `[JSP-10]`, returns `null` for `Fixing [JSP-10] today` and for `[jsp-10] x`
+- [x] `resolveProject` strips a leading `[...]` prefix and matches case-insensitively; a project named exactly `[teachmeto.ai]` never matches any code
+- [x] `resolveProject` filters to `active && workspaceId === target` before matching, returns `"matched"` on exactly one hit, `"ambiguous"` listing all matches on >1, `"no_match"` listing all active candidates on 0
+- [x] Gate passes: `npm test`
+- [x] Test count: ≥10 (covers every Edge Cases bullet plus TEM-14/15/16 branches)
 
 **Tests**: unit
 **Gate**: quick
@@ -138,10 +138,10 @@ T10 → T11 → T12 → T13 → T14 → T15
 
 **Done when**:
 
-- [ ] Calling `log` for each level writes exactly one JSON-ish line via `console.error`
-- [ ] `console.log` is never called (spied and asserted zero calls)
-- [ ] Gate passes: `npm test`
-- [ ] Test count: ≥3
+- [x] Calling `log` for each level writes exactly one JSON-ish line via `console.error`
+- [x] `console.log` is never called (spied and asserted zero calls)
+- [x] Gate passes: `npm test`
+- [x] Test count: ≥3
 
 **Tests**: unit
 **Gate**: quick
@@ -165,13 +165,13 @@ T10 → T11 → T12 → T13 → T14 → T15
 
 **Done when**:
 
-- [ ] Missing `TOGGL_API_TOKEN` throws `ConfigError` naming it
-- [ ] Missing, non-numeric, zero, or negative `TOGGL_WORKSPACE_ID` throws `ConfigError` naming it
-- [ ] Both invalid at once → one `ConfigError` naming both (joined, not first-error-only)
-- [ ] Unset `TOGGL_CACHE_PATH` defaults to `~/.cache/toggl-mcp/projects.json`; set value is used verbatim
-- [ ] Valid env produces a `Config` with no error thrown
-- [ ] Gate passes: `npm test`
-- [ ] Test count: ≥6
+- [x] Missing `TOGGL_API_TOKEN` throws `ConfigError` naming it
+- [x] Missing, non-numeric, zero, or negative `TOGGL_WORKSPACE_ID` throws `ConfigError` naming it
+- [x] Both invalid at once → one `ConfigError` naming both (joined, not first-error-only)
+- [x] Unset `TOGGL_CACHE_PATH` defaults to `~/.cache/toggl-mcp/projects.json`; set value is used verbatim
+- [x] Valid env produces a `Config` with no error thrown
+- [x] Gate passes: `npm test`
+- [x] Test count: ≥6
 
 **Tests**: unit
 **Gate**: quick
@@ -195,10 +195,10 @@ T10 → T11 → T12 → T13 → T14 → T15
 
 **Done when**:
 
-- [ ] `mcp/openapi/toggl.swagger2.json` and `toggl.openapi3.json` are both committed
-- [ ] `generated.ts` includes types covering time entries and projects request/response bodies
-- [ ] `npm run generate:openapi` reproduces `generated.ts` byte-identically from the committed spec
-- [ ] `npm run build` typechecks against the generated types
+- [x] `mcp/openapi/toggl.swagger2.json` and `toggl.openapi3.json` are both committed
+- [x] `generated.ts` includes types covering time entries and projects request/response bodies
+- [x] `npm run generate:openapi` reproduces `generated.ts` byte-identically from the committed spec
+- [x] `npm run build` typechecks against the generated types
 
 **Tests**: none
 **Gate**: build
@@ -222,15 +222,15 @@ T10 → T11 → T12 → T13 → T14 → T15
 
 **Done when**:
 
-- [ ] Every method issues exactly the documented method+path against a `node:http` fake server
-- [ ] Every request carries `Authorization: Basic <base64(token:api_token)>`; the header is asserted, never logged
-- [ ] 2xx responses resolve with the parsed body for every method
-- [ ] Non-2xx (404, other) throws `TogglApiError { status, method, path, body }`
-- [ ] `429` with a `Retry-After` header throws `TogglApiError` carrying `retryAfter`; without the header, `retryAfter` is absent
-- [ ] A network failure (server closes the socket) throws `TogglNetworkError { operation, cause }`
-- [ ] No method retries, sleeps, or issues a second request on any failure
-- [ ] Gate passes: `npm test`
-- [ ] Test count: ≥14
+- [x] Every method issues exactly the documented method+path against a `node:http` fake server
+- [x] Every request carries `Authorization: Basic <base64(token:api_token)>`; the header is asserted, never logged
+- [x] 2xx responses resolve with the parsed body for every method
+- [x] Non-2xx (404, other) throws `TogglApiError { status, method, path, body }`
+- [x] `429` with a `Retry-After` header throws `TogglApiError` carrying `retryAfter`; without the header, `retryAfter` is absent
+- [x] A network failure (server closes the socket) throws `TogglNetworkError { operation, cause }`
+- [x] No method retries, sleeps, or issues a second request on any failure
+- [x] Gate passes: `npm test`
+- [x] Test count: ≥14
 
 **Tests**: unit
 **Gate**: quick
@@ -254,13 +254,13 @@ T10 → T11 → T12 → T13 → T14 → T15
 
 **Done when**:
 
-- [ ] `TogglApiError` with `status: 404` maps to `{ error: { type: "toggl_api", status: 404, notFound: true, ... } }`
-- [ ] `TogglApiError` with `retryAfter` set carries it through unchanged; without it, the field is absent
-- [ ] `TogglNetworkError` maps to `{ error: { type: "network", message, operation } }`
-- [ ] A `"no_match"`/`"ambiguous"` `MatchResult` maps to `{ error: { type: "matching", extractedCode, candidates } }`
-- [ ] Every mapped result sets `isError: true`
-- [ ] Gate passes: `npm test`
-- [ ] Test count: ≥6
+- [x] `TogglApiError` with `status: 404` maps to `{ error: { type: "toggl_api", status: 404, notFound: true, ... } }`
+- [x] `TogglApiError` with `retryAfter` set carries it through unchanged; without it, the field is absent
+- [x] `TogglNetworkError` maps to `{ error: { type: "network", message, operation } }`
+- [x] A `"no_match"`/`"ambiguous"` `MatchResult` maps to `{ error: { type: "matching", extractedCode, candidates } }`
+- [x] Every mapped result sets `isError: true`
+- [x] Gate passes: `npm test`
+- [x] Test count: ≥6
 
 **Tests**: unit
 **Gate**: quick
@@ -284,17 +284,17 @@ T10 → T11 → T12 → T13 → T14 → T15
 
 **Done when**:
 
-- [ ] No cache file → one `listProjects` call, cache written with `fetchedAt` + `projects`
-- [ ] Fresh cache (<7 days) → zero `listProjects` calls
-- [ ] Stale cache (≥7 days, back-dated `fetchedAt`) → one refetch, cache overwritten
-- [ ] `forceRefresh: true` → always refetches regardless of freshness, returns `{ count, fetchedAt }`-shaped data for the `refresh_projects` tool to use
-- [ ] Cache file missing, malformed JSON, or missing `fetchedAt`/`projects` → treated as a miss, refetches, never throws the parse error
-- [ ] Cache directory unwritable → write failure logged via T3's logger, freshly-fetched list still returned, call succeeds
-- [ ] Stale cache + refetch fails (network/429/5xx) + a stale cache exists → returns the stale `projects` plus a `stale_cache` warning with age and underlying error
-- [ ] Stale/absent cache + refetch fails + no cache at all → rethrows the underlying `TogglApiError`/`TogglNetworkError`
-- [ ] Concurrent-write edge case: cache write goes through a temp-file-then-rename, verified by asserting no `.tmp-*` file is left behind after a successful write
-- [ ] Gate passes: `npm test`
-- [ ] Test count: ≥10
+- [x] No cache file → one `listProjects` call, cache written with `fetchedAt` + `projects`
+- [x] Fresh cache (<7 days) → zero `listProjects` calls
+- [x] Stale cache (≥7 days, back-dated `fetchedAt`) → one refetch, cache overwritten
+- [x] `forceRefresh: true` → always refetches regardless of freshness, returns `{ count, fetchedAt }`-shaped data for the `refresh_projects` tool to use
+- [x] Cache file missing, malformed JSON, or missing `fetchedAt`/`projects` → treated as a miss, refetches, never throws the parse error
+- [x] Cache directory unwritable → write failure logged via T3's logger, freshly-fetched list still returned, call succeeds
+- [x] Stale cache + refetch fails (network/429/5xx) + a stale cache exists → returns the stale `projects` plus a `stale_cache` warning with age and underlying error
+- [x] Stale/absent cache + refetch fails + no cache at all → rethrows the underlying `TogglApiError`/`TogglNetworkError`
+- [x] Concurrent-write edge case: cache write goes through a temp-file-then-rename, verified by asserting no `.tmp-*` file is left behind after a successful write
+- [x] Gate passes: `npm test`
+- [x] Test count: ≥10
 
 **Tests**: unit
 **Gate**: quick
@@ -318,12 +318,12 @@ T10 → T11 → T12 → T13 → T14 → T15
 
 **Done when**:
 
-- [ ] Entry with a `project_id` present in `projectsById` → `project` is the resolved name
-- [ ] Entry with `project_id` null/absent → `project: null`
-- [ ] Entry with a `project_id` not present in `projectsById` (stale/mismatched cache) → `project: null`, not a thrown error
-- [ ] Output carries exactly the five fields — no extras leak through from the raw entry
-- [ ] Gate passes: `npm test`
-- [ ] Test count: ≥4
+- [x] Entry with a `project_id` present in `projectsById` → `project` is the resolved name
+- [x] Entry with `project_id` null/absent → `project: null`
+- [x] Entry with a `project_id` not present in `projectsById` (stale/mismatched cache) → `project: null`, not a thrown error
+- [x] Output carries exactly the five fields — no extras leak through from the raw entry
+- [x] Gate passes: `npm test`
+- [x] Test count: ≥4
 
 **Tests**: unit
 **Gate**: quick
@@ -347,13 +347,13 @@ T10 → T11 → T12 → T13 → T14 → T15
 
 **Done when**:
 
-- [ ] `list_time_entries` issues exactly one Toggl request per call, regardless of range width
-- [ ] Invalid `start_date`/`end_date` (bad format, `end_date < start_date`) is rejected by the SDK's schema validation before any Toggl request — asserted via zero outbound requests
-- [ ] Result entries carry exactly the five curated fields; entries from a foreign workspace are omitted
-- [ ] An empty range returns a successful empty list, not an error
-- [ ] `get_time_entry` issues exactly one Toggl request and returns the curated shape; a 404 from Toggl returns a structured not-found error via T7, not an empty success
-- [ ] Gate passes: `npm test`
-- [ ] Test count: ≥10
+- [x] `list_time_entries` issues exactly one Toggl request per call, regardless of range width
+- [x] Invalid `start_date`/`end_date` (bad format, `end_date < start_date`) is rejected by the SDK's schema validation before any Toggl request — asserted via zero outbound requests
+- [x] Result entries carry exactly the five curated fields; entries from a foreign workspace are omitted
+- [x] An empty range returns a successful empty list, not an error
+- [x] `get_time_entry` issues exactly one Toggl request and returns the curated shape; a 404 from Toggl returns a structured not-found error via T7, not an empty success
+- [x] Gate passes: `npm test`
+- [x] Test count: ≥10
 
 **Tests**: integration
 **Gate**: full
@@ -377,14 +377,14 @@ T10 → T11 → T12 → T13 → T14 → T15
 
 **Done when**:
 
-- [ ] Invalid `start`/`stop` (bad RFC3339, `stop` not after `start`) is rejected before any Toggl request
-- [ ] `[JSP-10] Creating form` for a 2-hour window → outbound `POST` body carries the matched project id and `duration: 7200`
-- [ ] Ambiguous/no-match code → the matching error is returned and zero `POST` requests are issued
-- [ ] Explicit `project_id` → matching is skipped entirely and `listProjects`/the cache is never read
-- [ ] Untagged description with no `project_id` → `POST` omits `project_id`, result reports `project: null`
-- [ ] Omitted `workspace_id` uses `TOGGL_WORKSPACE_ID`; a supplied value overrides it for that call only
-- [ ] Gate passes: `npm test`
-- [ ] Test count: ≥10
+- [x] Invalid `start`/`stop` (bad RFC3339, `stop` not after `start`) is rejected before any Toggl request
+- [x] `[JSP-10] Creating form` for a 2-hour window → outbound `POST` body carries the matched project id and `duration: 7200`
+- [x] Ambiguous/no-match code → the matching error is returned and zero `POST` requests are issued
+- [x] Explicit `project_id` → matching is skipped entirely and `listProjects`/the cache is never read
+- [x] Untagged description with no `project_id` → `POST` omits `project_id`, result reports `project: null`
+- [x] Omitted `workspace_id` uses `TOGGL_WORKSPACE_ID`; a supplied value overrides it for that call only
+- [x] Gate passes: `npm test`
+- [x] Test count: ≥10
 
 **Tests**: integration
 **Gate**: full
@@ -409,13 +409,13 @@ T10 → T11 → T12 → T13 → T14 → T15
 
 **Done when**:
 
-- [ ] A call supplying only `id` is rejected before any Toggl request
-- [ ] Updating only `description` from `[JSP-10] a` to `[OIQ-3] b` → outbound `PUT` carries the OIQ project id and the original `start`/`stop` unchanged; exactly two requests (`GET` then `PUT`)
-- [ ] Updating `start`/`stop` without `description` → the entry's existing `project_id` passes through untouched and `listProjects`/the cache is never read
-- [ ] A merged `stop` not strictly after the merged `start` is rejected and no `PUT` is issued
-- [ ] Successful update returns the curated five-field shape
-- [ ] Gate passes: `npm test`
-- [ ] Test count: ≥8
+- [x] A call supplying only `id` is rejected before any Toggl request
+- [x] Updating only `description` from `[JSP-10] a` to `[OIQ-3] b` → outbound `PUT` carries the OIQ project id and the original `start`/`stop` unchanged; exactly two requests (`GET` then `PUT`)
+- [x] Updating `start`/`stop` without `description` → the entry's existing `project_id` passes through untouched and `listProjects`/the cache is never read
+- [x] A merged `stop` not strictly after the merged `start` is rejected and no `PUT` is issued
+- [x] Successful update returns the curated five-field shape
+- [x] Gate passes: `npm test`
+- [x] Test count: ≥8
 
 **Tests**: integration
 **Gate**: full
@@ -439,10 +439,10 @@ T10 → T11 → T12 → T13 → T14 → T15
 
 **Done when**:
 
-- [ ] Deleting an existing id issues exactly one `DELETE` and returns a success result naming that id
-- [ ] Deleting an id the fake server 404s returns a structured not-found error, not a success
-- [ ] Gate passes: `npm test`
-- [ ] Test count: ≥4
+- [x] Deleting an existing id issues exactly one `DELETE` and returns a success result naming that id
+- [x] Deleting an id the fake server 404s returns a structured not-found error, not a success
+- [x] Gate passes: `npm test`
+- [x] Test count: ≥4
 
 **Tests**: integration
 **Gate**: full
@@ -466,11 +466,11 @@ T10 → T11 → T12 → T13 → T14 → T15
 
 **Done when**:
 
-- [ ] Calling with a fresh cache still forces a refetch and overwrites the cache
-- [ ] Success result reports the refetched project count and the new `fetchedAt`
-- [ ] A refetch failure with no prior cache surfaces the underlying Toggl error via T7
-- [ ] Gate passes: `npm test`
-- [ ] Test count: ≥4
+- [x] Calling with a fresh cache still forces a refetch and overwrites the cache
+- [x] Success result reports the refetched project count and the new `fetchedAt`
+- [x] A refetch failure with no prior cache surfaces the underlying Toggl error via T7
+- [x] Gate passes: `npm test`
+- [x] Test count: ≥4
 
 **Tests**: integration
 **Gate**: full
@@ -494,11 +494,11 @@ T10 → T11 → T12 → T13 → T14 → T15
 
 **Done when**:
 
-- [ ] Spawned with `TOGGL_API_TOKEN` unset → non-zero exit, stderr names the missing variable, zero bytes written to stdout (no MCP handshake attempted)
-- [ ] Spawned with valid env → successful MCP handshake and a tool list of exactly 6 tools
-- [ ] Every tool from T10-T14 is registered exactly once
-- [ ] Gate passes: `npm test`
-- [ ] Test count: ≥3
+- [x] Spawned with `TOGGL_API_TOKEN` unset → non-zero exit, stderr names the missing variable, zero bytes written to stdout (no MCP handshake attempted)
+- [x] Spawned with valid env → successful MCP handshake and a tool list of exactly 6 tools
+- [x] Every tool from T10-T14 is registered exactly once
+- [x] Gate passes: `npm test`
+- [x] Test count: ≥3
 
 **Tests**: integration
 **Gate**: full
