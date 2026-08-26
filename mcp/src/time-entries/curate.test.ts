@@ -45,7 +45,7 @@ test("entry with a project_id not present in projectsById (stale/mismatched cach
   assert.equal(result.project, null);
 });
 
-test("entry carrying its own project_name resolves the project even when the cache is empty (explicit project_id bypasses the cache, TEM-16 AC7)", () => {
+test("entry's own project_name bypasses the projectsById cache lookup entirely, even when the cache is empty (TEM-16 AC7)", () => {
   const entry: RawTimeEntry = { ...BASE_ENTRY, project_name: "Time Entries MCP" };
   const projectsById = new Map<number, string>();
   const result = toCuratedEntry(entry, projectsById);
@@ -59,6 +59,29 @@ test("entry's own project_name takes precedence over a stale/mismatched cache en
   assert.equal(result.project, "Current Name");
 });
 
+test("entry with stop: null (running entry) preserves null in output", () => {
+  const entry = { ...BASE_ENTRY, stop: null } as unknown as RawTimeEntry;
+  const projectsById = new Map([[42, "Time Entries MCP"]]);
+  const result = toCuratedEntry(entry, projectsById);
+  assert.equal(result.stop, null);
+});
+
+test("entry with stop key absent (running entry) outputs stop: null", () => {
+  const { stop, ...rest } = BASE_ENTRY;
+  void stop;
+  const entry: RawTimeEntry = rest;
+  const projectsById = new Map([[42, "Time Entries MCP"]]);
+  const result = toCuratedEntry(entry, projectsById);
+  assert.equal(result.stop, null);
+});
+
+test("entry with project_id: null and project_name present outputs project: null (project_name not consulted)", () => {
+  const entry = { ...BASE_ENTRY, project_id: null, project_name: "Something" } as RawTimeEntry;
+  const projectsById = new Map<number, string>();
+  const result = toCuratedEntry(entry, projectsById);
+  assert.equal(result.project, null);
+});
+
 test("output carries exactly the five CuratedTimeEntry fields, no extra raw fields leak through", () => {
   const entryWithExtras = {
     ...BASE_ENTRY,
@@ -69,4 +92,17 @@ test("output carries exactly the five CuratedTimeEntry fields, no extra raw fiel
   const projectsById = new Map([[42, "Time Entries MCP"]]);
   const result = toCuratedEntry(entryWithExtras, projectsById);
   assert.deepEqual(Object.keys(result).sort(), ["description", "id", "project", "start", "stop"]);
+});
+
+test("entry with id, description, and start all omitted/null falls back to 0, \"\", \"\"", () => {
+  const entry = {
+    project_id: 42,
+  } as RawTimeEntry;
+  const projectsById = new Map([[42, "Time Entries MCP"]]);
+  const result = toCuratedEntry(entry, projectsById);
+  assert.equal(result.id, 0);
+  assert.equal(result.description, "");
+  assert.equal(result.start, "");
+  assert.equal(result.stop, null);
+  assert.equal(result.project, "Time Entries MCP");
 });
