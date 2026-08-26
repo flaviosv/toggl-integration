@@ -17,7 +17,7 @@ export class TogglApiError extends Error {
   readonly method: string;
   readonly path: string;
   readonly body: unknown;
-  declare readonly retryAfter?: string;
+  declare readonly retryAfter?: string;  // declare suppresses auto-initialization so retryAfter is genuinely absent (not undefined-valued) when no Retry-After header is present
 
   constructor(opts: TogglApiErrorOptions) {
     super(`Toggl API error: ${opts.method} ${opts.path} -> ${opts.status}`);
@@ -61,20 +61,17 @@ export class TogglClient {
   }
 
   private async request<T>(
-    method: string,
     path: string,
     operation: string,
-    body?: unknown,
   ): Promise<T> {
     let response: Response;
     try {
       response = await fetch(`${this.baseUrl}${path}`, {
-        method,
+        method: "GET",
         headers: {
           Authorization: this.authHeader,
-          ...(body !== undefined ? { "Content-Type": "application/json" } : {}),
         },
-        body: body !== undefined ? JSON.stringify(body) : undefined,
+        signal: AbortSignal.timeout(30000),
       });
     } catch (cause) {
       throw new TogglNetworkError(operation, cause);
@@ -96,7 +93,7 @@ export class TogglClient {
       const retryAfter = response.headers.get("retry-after");
       throw new TogglApiError({
         status: response.status,
-        method,
+        method: "GET",
         path,
         body: parsedBody,
         ...(retryAfter !== null ? { retryAfter } : {}),
@@ -109,13 +106,13 @@ export class TogglClient {
   listTimeEntries(query: { start_date: string; end_date: string }): Promise<RawTimeEntry[]> {
     const params = new URLSearchParams(query);
     return this.request<RawTimeEntry[]>(
-      "GET",
       `/me/time_entries?${params.toString()}`,
       "listTimeEntries",
     );
   }
 
   listProjects(): Promise<RawProject[]> {
-    return this.request<RawProject[]>("GET", "/me/projects?include_archived=false", "listProjects");
+    const params = new URLSearchParams({ include_archived: "false" });
+    return this.request<RawProject[]>(`/me/projects?${params.toString()}`, "listProjects");
   }
 }
