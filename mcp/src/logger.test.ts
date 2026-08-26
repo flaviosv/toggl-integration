@@ -36,3 +36,11 @@ test("log serializes level, message, and meta into the emitted line", (t) => {
   const parsed = JSON.parse(emitted);
   assert.deepEqual(parsed, { level: "error", message: "toggl request failed", meta: { status: 500 } });
 });
+
+test("log omits meta key from JSON when meta is not provided", (t) => {
+  const errorMock = t.mock.method(console, "error", () => {});
+  log("info", "hello");
+  const emitted = errorMock.mock.calls[0].arguments[0] as string;
+  const parsed = JSON.parse(emitted);
+  assert.equal("meta" in parsed, false);
+});
