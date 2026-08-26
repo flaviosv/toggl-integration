@@ -32,6 +32,30 @@ test("TogglApiError with status 404 maps to toggl_api payload with notFound true
   });
 });
 
+test("TogglApiError with status 404 and retryAfter intentionally omits retryAfter from output", () => {
+  const err = new TogglApiError({
+    status: 404,
+    method: "GET",
+    path: "/x",
+    body: null,
+    retryAfter: "30",
+  });
+  const result = toErrorResult(err);
+  assert.equal(result.isError, true);
+  const parsed = parse(result) as { error: Record<string, unknown> };
+  assert.equal("retryAfter" in parsed.error, false);
+  assert.deepEqual(parsed, {
+    error: {
+      type: "toggl_api",
+      status: 404,
+      notFound: true,
+      method: "GET",
+      path: "/x",
+      body: null,
+    },
+  });
+});
+
 test("TogglApiError with retryAfter carries it through unchanged", () => {
   const err = new TogglApiError({
     status: 429,
