@@ -67,79 +67,6 @@ test("listTimeEntries issues GET /me/time_entries with query params, correct aut
   }
 });
 
-test("getTimeEntry issues GET /me/time_entries/{id} with correct auth and resolves parsed object", async () => {
-  const fake = await startFakeServer((_req, res) => {
-    sendJson(res, 200, { id: 42, description: "entry" });
-  });
-  try {
-    const client = new TogglClient({ apiToken: "tok123", baseUrl: fake.baseUrl });
-    const result = await client.getTimeEntry(42);
-    assert.equal(fake.requests.length, 1);
-    assert.equal(fake.requests[0].method, "GET");
-    assert.equal(fake.requests[0].url, "/me/time_entries/42");
-    assert.equal(fake.requests[0].headers.authorization, EXPECTED_AUTH);
-    assert.deepEqual(result, { id: 42, description: "entry" });
-  } finally {
-    await fake.close();
-  }
-});
-
-test("createTimeEntry issues POST /workspaces/{wid}/time_entries with body, correct auth, and resolves parsed object", async () => {
-  const fake = await startFakeServer((_req, res) => {
-    sendJson(res, 200, { id: 7, description: "new entry" });
-  });
-  try {
-    const client = new TogglClient({ apiToken: "tok123", baseUrl: fake.baseUrl });
-    const body = { description: "new entry", start: "2026-01-01T00:00:00Z", workspace_id: 99 };
-    const result = await client.createTimeEntry(99, body);
-    assert.equal(fake.requests.length, 1);
-    assert.equal(fake.requests[0].method, "POST");
-    assert.equal(fake.requests[0].url, "/workspaces/99/time_entries");
-    assert.equal(fake.requests[0].headers.authorization, EXPECTED_AUTH);
-    assert.deepEqual(JSON.parse(fake.requests[0].body), body);
-    assert.deepEqual(result, { id: 7, description: "new entry" });
-  } finally {
-    await fake.close();
-  }
-});
-
-test("updateTimeEntry issues PUT /workspaces/{wid}/time_entries/{id} with body, correct auth, and resolves parsed object", async () => {
-  const fake = await startFakeServer((_req, res) => {
-    sendJson(res, 200, { id: 7, description: "updated" });
-  });
-  try {
-    const client = new TogglClient({ apiToken: "tok123", baseUrl: fake.baseUrl });
-    const body = { id: 7, description: "updated", start: "2026-01-01T00:00:00Z" };
-    const result = await client.updateTimeEntry(99, 7, body);
-    assert.equal(fake.requests.length, 1);
-    assert.equal(fake.requests[0].method, "PUT");
-    assert.equal(fake.requests[0].url, "/workspaces/99/time_entries/7");
-    assert.equal(fake.requests[0].headers.authorization, EXPECTED_AUTH);
-    assert.deepEqual(JSON.parse(fake.requests[0].body), body);
-    assert.deepEqual(result, { id: 7, description: "updated" });
-  } finally {
-    await fake.close();
-  }
-});
-
-test("deleteTimeEntry issues DELETE /workspaces/{wid}/time_entries/{id} with correct auth and resolves undefined", async () => {
-  const fake = await startFakeServer((_req, res) => {
-    res.writeHead(200, { "Content-Type": "application/json" });
-    res.end();
-  });
-  try {
-    const client = new TogglClient({ apiToken: "tok123", baseUrl: fake.baseUrl });
-    const result = await client.deleteTimeEntry(99, 7);
-    assert.equal(fake.requests.length, 1);
-    assert.equal(fake.requests[0].method, "DELETE");
-    assert.equal(fake.requests[0].url, "/workspaces/99/time_entries/7");
-    assert.equal(fake.requests[0].headers.authorization, EXPECTED_AUTH);
-    assert.equal(result, undefined);
-  } finally {
-    await fake.close();
-  }
-});
-
 test("listProjects issues GET /me/projects?include_archived=false with correct auth and resolves parsed array", async () => {
   const fake = await startFakeServer((_req, res) => {
     sendJson(res, 200, [{ id: 1, name: "Proj", active: true, workspace_id: 99 }]);
@@ -178,12 +105,12 @@ test("404 response throws TogglApiError with status, method, path, and body; exa
   try {
     const client = new TogglClient({ apiToken: "tok123", baseUrl: fake.baseUrl });
     await assert.rejects(
-      () => client.getTimeEntry(999),
+      () => client.listTimeEntries({ start_date: "2026-01-01", end_date: "2026-01-02" }),
       (err: unknown) => {
         assert.ok(err instanceof TogglApiError);
         assert.equal(err.status, 404);
         assert.equal(err.method, "GET");
-        assert.equal(err.path, "/me/time_entries/999");
+        assert.equal(err.path, "/me/time_entries?start_date=2026-01-01&end_date=2026-01-02");
         assert.deepEqual(err.body, { error: "not found" });
         return true;
       },
@@ -252,7 +179,7 @@ test("404 sets isError-relevant fields but does NOT set retryAfter (absent, not 
   try {
     const client = new TogglClient({ apiToken: "tok123", baseUrl: fake.baseUrl });
     await assert.rejects(
-      () => client.getTimeEntry(1),
+      () => client.listProjects(),
       (err: unknown) => {
         assert.ok(err instanceof TogglApiError);
         assert.equal("retryAfter" in err, false);
@@ -332,7 +259,7 @@ test("no retry: a failing call (404) results in exactly one request received by 
   });
   try {
     const client = new TogglClient({ apiToken: "tok123", baseUrl: fake.baseUrl });
-    await assert.rejects(() => client.deleteTimeEntry(1, 2));
+    await assert.rejects(() => client.listProjects());
     assert.equal(fake.requests.length, 1);
   } finally {
     await fake.close();

@@ -1,12 +1,7 @@
 import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
 import { TogglApiError, TogglNetworkError } from "./toggl/client.js";
-import type { MatchResult } from "./matching/match-project.js";
 
-type UnmatchedResult = Extract<MatchResult, { status: "no_match" | "ambiguous" }>;
-
-export function toErrorResult(
-  err: TogglApiError | TogglNetworkError | UnmatchedResult,
-): CallToolResult {
+export function toErrorResult(err: TogglApiError | TogglNetworkError): CallToolResult {
   const payload = buildErrorPayload(err);
   return {
     content: [{ type: "text", text: JSON.stringify(payload) }],
@@ -14,9 +9,7 @@ export function toErrorResult(
   };
 }
 
-function buildErrorPayload(
-  err: TogglApiError | TogglNetworkError | UnmatchedResult,
-): { error: Record<string, unknown> } {
+function buildErrorPayload(err: TogglApiError | TogglNetworkError): { error: Record<string, unknown> } {
   if (err instanceof TogglApiError) {
     if (err.status === 404) {
       return {
@@ -42,21 +35,11 @@ function buildErrorPayload(
     };
   }
 
-  if (err instanceof TogglNetworkError) {
-    return {
-      error: {
-        type: "network",
-        message: err.message,
-        operation: err.operation,
-      },
-    };
-  }
-
   return {
     error: {
-      type: "matching",
-      extractedCode: err.extractedCode,
-      candidates: err.candidates,
+      type: "network",
+      message: err.message,
+      operation: err.operation,
     },
   };
 }

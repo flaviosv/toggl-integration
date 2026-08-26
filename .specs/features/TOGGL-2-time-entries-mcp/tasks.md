@@ -1,5 +1,11 @@
 # Time Entries MCP Tasks
 
+> **Revision (2026-08-26):** Scope was cut back to read-only listing after this task list was
+> fully executed — see spec.md's own Revision section. Tasks below covering
+> `create`/`update`/`delete`/`get_time_entry`, `refresh_projects`, or ticket-code project matching
+> describe work that was implemented and later removed; this file is kept as the historical
+> execution record, not a description of current scope.
+
 ## Execution Protocol (MANDATORY -- do not skip)
 
 Implement these tasks with the `tlc-spec-driven` skill: **activate it by name and follow its Execute flow and Critical Rules.** Do not search for skill files by filesystem path. The skill is the source of truth for the full flow (per-task cycle, sub-agent delegation, adequacy review, Verifier, discrimination sensor).

@@ -3,7 +3,6 @@ import type { components } from "./generated.js";
 export type RawTimeEntry =
   components["schemas"]["github_com_toggl_toggl_api_internal_models.TimeEntry"];
 export type RawProject = components["schemas"]["github_com_toggl_toggl_api_internal_models.Project"];
-export type CreateTimeEntryBody = components["schemas"]["timeentry.Payload"];
 
 export interface TogglApiErrorOptions {
   status: number;
@@ -113,36 +112,6 @@ export class TogglClient {
       "GET",
       `/me/time_entries?${params.toString()}`,
       "listTimeEntries",
-    );
-  }
-
-  getTimeEntry(id: number): Promise<RawTimeEntry> {
-    return this.request<RawTimeEntry>("GET", `/me/time_entries/${id}`, "getTimeEntry");
-  }
-
-  createTimeEntry(workspaceId: number, body: CreateTimeEntryBody): Promise<RawTimeEntry> {
-    return this.request<RawTimeEntry>(
-      "POST",
-      `/workspaces/${workspaceId}/time_entries`,
-      "createTimeEntry",
-      body,
-    );
-  }
-
-  updateTimeEntry(workspaceId: number, id: number, body: RawTimeEntry): Promise<RawTimeEntry> {
-    return this.request<RawTimeEntry>(
-      "PUT",
-      `/workspaces/${workspaceId}/time_entries/${id}`,
-      "updateTimeEntry",
-      body,
-    );
-  }
-
-  async deleteTimeEntry(workspaceId: number, id: number): Promise<void> {
-    await this.request<void>(
-      "DELETE",
-      `/workspaces/${workspaceId}/time_entries/${id}`,
-      "deleteTimeEntry",
     );
   }
 

@@ -63,7 +63,7 @@ test("invalid TOGGL_WORKSPACE_ID: non-zero exit, stderr names the variable, zero
   assert.match(Buffer.concat(stderrChunks).toString("utf8"), /TOGGL_WORKSPACE_ID/);
 });
 
-test("valid env: successful MCP handshake and a tool list of exactly the 6 registered tools", async () => {
+test("valid env: successful MCP handshake and a tool list of exactly the 1 registered tool", async () => {
   const transport = new StdioClientTransport({
     command: process.execPath,
     args: [ENTRY_POINT],
@@ -78,15 +78,7 @@ test("valid env: successful MCP handshake and a tool list of exactly the 6 regis
     await client.connect(transport);
     const { tools } = await client.listTools();
     const names = tools.map((t) => t.name).sort();
-    assert.deepEqual(names, [
-      "create_time_entry",
-      "delete_time_entry",
-      "get_time_entry",
-      "list_time_entries",
-      "refresh_projects",
-      "update_time_entry",
-    ]);
-    assert.equal(new Set(names).size, 6);
+    assert.deepEqual(names, ["list_time_entries"]);
   } finally {
     await client.close();
   }

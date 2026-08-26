@@ -1,5 +1,11 @@
 # TOGGL-2 Time Entries MCP — Independent Verification Report
 
+> **Revision (2026-08-26):** Scope was cut back to read-only listing after this report was
+> written — see spec.md's own Revision section. This report verified the full CRUD +
+> project-matching build; it is kept as the historical verification record for that build, not
+> for the current reduced scope (re-verified instead by the simplification's own clean
+> build + full test pass, see the commit that made this cut).
+
 **Verifier**: fresh agent, independent of the implementer (author ≠ verifier)
 **Diff/commit range covered**: `55c9874..HEAD` (17 commits, `mcp/` package only)
 **Date**: 2026-08-26

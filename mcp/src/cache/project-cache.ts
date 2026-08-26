@@ -1,7 +1,13 @@
 import fs from "node:fs/promises";
 import type { TogglClient, RawProject } from "../toggl/client.js";
-import type { CachedProject } from "../matching/match-project.js";
 import { log } from "../logger.js";
+
+export interface CachedProject {
+  id: number;
+  name: string;
+  active: boolean;
+  workspaceId: number;
+}
 
 export interface ProjectCacheFile {
   fetchedAt: string;

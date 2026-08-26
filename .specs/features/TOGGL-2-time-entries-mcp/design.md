@@ -3,6 +3,12 @@
 **Spec**: `.specs/features/TOGGL-2-time-entries-mcp/spec.md` (TEM-01..TEM-24)
 **Status**: Draft
 
+> **Revision (2026-08-26):** Scope was cut back to read-only listing — see spec.md's own
+> Revision section. Everything below describing `create`/`update`/`delete`/`get_time_entry`,
+> `refresh_projects`, or ticket-code project matching is historical: that code was removed. The
+> surviving design is the Toggl fetch client (`listTimeEntries`/`listProjects` only), the project
+> cache, and `list_time_entries` — read the rest of this document with that filter applied.
+
 ---
 
 ## Architecture Overview

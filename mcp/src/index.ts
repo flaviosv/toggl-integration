@@ -5,11 +5,6 @@ import { TogglClient } from "./toggl/client.js";
 import { log } from "./logger.js";
 import type { ToolDeps } from "./tools/schemas.js";
 import { registerListTimeEntries } from "./tools/list-time-entries.js";
-import { registerGetTimeEntry } from "./tools/get-time-entry.js";
-import { registerCreateTimeEntry } from "./tools/create-time-entry.js";
-import { registerUpdateTimeEntry } from "./tools/update-time-entry.js";
-import { registerDeleteTimeEntry } from "./tools/delete-time-entry.js";
-import { registerRefreshProjects } from "./tools/refresh-projects.js";
 
 async function main(): Promise<void> {
   let config;
@@ -28,11 +23,6 @@ async function main(): Promise<void> {
 
   const server = new McpServer({ name: "toggl-mcp", version: "0.1.0" });
   registerListTimeEntries(server, deps);
-  registerGetTimeEntry(server, deps);
-  registerCreateTimeEntry(server, deps);
-  registerUpdateTimeEntry(server, deps);
-  registerDeleteTimeEntry(server, deps);
-  registerRefreshProjects(server, deps);
 
   const transport = new StdioServerTransport();
   await server.connect(transport);
