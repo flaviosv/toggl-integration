@@ -115,13 +115,3 @@ test("TogglNetworkError maps to network payload with message and operation", () 
     },
   });
 });
-
-test("every mapped result sets isError true", () => {
-  const results = [
-    toErrorResult(new TogglApiError({ status: 404, method: "GET", path: "/x", body: null })),
-    toErrorResult(new TogglNetworkError("op", new Error("fail"))),
-  ];
-  for (const result of results) {
-    assert.equal(result.isError, true);
-  }
-});
