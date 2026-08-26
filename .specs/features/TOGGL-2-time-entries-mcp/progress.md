@@ -30,3 +30,7 @@
 - Step 7a (specify): done — spec.md (Large, 8 stories, 24 reqs, 6 tools). Blocker surfaced: Toggl has no true bulk-delete endpoint (bulk cost = N reqs, not 1); user chose to drop bulk_delete_time_entries entirely — spec.md revised accordingly.
 - Step 7b (design): done — design.md (285 lines, doc-only, no code execution — verified MCP SDK surface via Context7 docs instead). Records AD-004 in .specs/STATE.md (TS tooling defaults for future packages). First attempt was stopped mid-run for doing live SDK smoke-testing (implementation work, not concepting); redone lightweight per user direction.
 - Step 8 (tasks): done — tasks.md, 15 tasks, 3 phases, all 24 requirements traced
+- Step 9 (commit spec artifacts): done — afc7edb
+- Step 10 (execute): done — Verifier: PASS (113/113 tests, 0 failures, build clean; 4 flagged gaps fixed in fix-verify loop). 22 commits (T1-T15 + docs/validation/fix). AD-004 recorded in .specs/STATE.md, committed separately (fe5b49a).
+- Step 10b (README, gap-fix — original request explicitly asked for it, omitted from grilling seed by this orchestrator): done — mcp/README.md, commit 8f0e9f5
+- Step 11 (push + PR description): done — pushed through fe5b49a, PR #2 description rewritten from spec.md/tasks.md/validation.md
