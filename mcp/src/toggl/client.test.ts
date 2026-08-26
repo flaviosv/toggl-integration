@@ -265,3 +265,45 @@ test("no retry: a failing call (404) results in exactly one request received by 
     await fake.close();
   }
 });
+
+test("500 response with non-JSON body (e.g. HTML error page) falls back to raw string in TogglApiError.body", async () => {
+  const fake = await startFakeServer((_req, res) => {
+    res.writeHead(500);
+    res.end("Internal Server Error");
+  });
+  try {
+    const client = new TogglClient({ apiToken: "tok123", baseUrl: fake.baseUrl });
+    await assert.rejects(
+      () => client.listProjects(),
+      (err: unknown) => {
+        assert.ok(err instanceof TogglApiError);
+        assert.equal(err.status, 500);
+        assert.equal(err.body, "Internal Server Error");
+        return true;
+      },
+    );
+  } finally {
+    await fake.close();
+  }
+});
+
+test("404 response with empty body results in undefined TogglApiError.body", async () => {
+  const fake = await startFakeServer((_req, res) => {
+    res.writeHead(404);
+    res.end();
+  });
+  try {
+    const client = new TogglClient({ apiToken: "tok123", baseUrl: fake.baseUrl });
+    await assert.rejects(
+      () => client.listProjects(),
+      (err: unknown) => {
+        assert.ok(err instanceof TogglApiError);
+        assert.equal(err.status, 404);
+        assert.equal(err.body, undefined);
+        return true;
+      },
+    );
+  } finally {
+    await fake.close();
+  }
+});
