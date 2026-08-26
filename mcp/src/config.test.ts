@@ -88,3 +88,25 @@ test("a ConfigError raised alongside a present TOGGL_API_TOKEN never includes th
       !(err as Error).message.includes(secretToken),
   );
 });
+
+test("whitespace-only TOGGL_API_TOKEN throws ConfigError naming it", () => {
+  const env = { TOGGL_API_TOKEN: "   ", TOGGL_WORKSPACE_ID: "42" };
+  assert.throws(
+    () => loadConfig(env),
+    (err: unknown) => err instanceof ConfigError && /TOGGL_API_TOKEN/.test((err as Error).message),
+  );
+});
+
+test("whitespace-only TOGGL_WORKSPACE_ID throws ConfigError naming it", () => {
+  const env = { TOGGL_API_TOKEN: "abc123", TOGGL_WORKSPACE_ID: "   " };
+  assert.throws(
+    () => loadConfig(env),
+    (err: unknown) => err instanceof ConfigError && /TOGGL_WORKSPACE_ID/.test((err as Error).message),
+  );
+});
+
+test("whitespace-only TOGGL_CACHE_PATH falls back to the default", () => {
+  const env = { ...VALID_ENV, TOGGL_CACHE_PATH: "   " };
+  const config = loadConfig(env);
+  assert.equal(config.cachePath, path.join(os.homedir(), ".cache", "toggl-mcp", "projects.json"));
+});
