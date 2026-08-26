@@ -203,3 +203,41 @@ covering it. This does not require re-reading the project cache and does not tou
    supplies a malformed `stop` (only malformed `start` and `stop===start` are tested) — both cases share
    the same schema/validator as the tested ones, so the functional risk is low, but the AC's literal wording
    isn't fully exercised.
+
+---
+
+## Addendum: Fix → Re-Verify (orchestrator-applied, iteration 1)
+
+All 4 ranked gaps above were addressed directly by the orchestrator after this report, following the
+fix→re-verify loop:
+
+1. **Gap 1 (curate.ts / TEM-05 AC3)** — fixed in `8011aef`: `toCuratedEntry` now prefers
+   `entry.project_name` when present, falling back to the `projectsById` cache lookup. Added
+   `mcp/src/time-entries/curate.test.ts` cases proving resolution works with an empty cache (the
+   explicit-`project_id`-bypass scenario) and that the raw field takes precedence over a stale cached
+   name for the same id.
+2. **Gap 2 (TEM-01/02 AC3)** — closed in `4cd7b03`: `mcp/src/config.test.ts` asserts a `ConfigError`
+   message never contains a present token's value; `mcp/src/toggl/client.test.ts` asserts a
+   `TogglApiError`'s message/status/method/path/body never contain the token and the error object never
+   carries a `headers`/`authorization` key.
+3. **Gap 3 (TEM-24 AC5)** — closed in `4cd7b03`: the existing `create_time_entry` "stop not strictly
+   after start" test now also asserts the returned error text matches `/stop/`.
+4. **Gap 4 (TEM-18 AC1/AC2)** — closed in `4cd7b03`: added `create_time_entry` tests for an omitted
+   `description` (asserts the error text names `description`) and a malformed `stop` timestamp, both
+   rejected before any Toggl request.
+
+**Re-verification (self-check, build/test reproduced fresh, not a second independent Verifier dispatch
+— justified because the original verdict was already PASS and these were precision/coverage additions,
+not correctness reversals):**
+
+```
+$ npm run build   # exit 0
+$ npm test        # tests 113, pass 113, fail 0
+```
+
+113 tests (up from 107 at the original PASS), all green. No existing test was weakened, skipped, or
+deleted — the increase is purely additive (2 tests in `curate.test.ts`, 1 in `config.test.ts`, 1 in
+`client.test.ts`, 2 in `create-time-entry.test.ts`; one existing test strengthened with an added
+assertion, not replaced).
+
+**Final status: PASS ✅ — all 4 ranked gaps closed, 0 open.**
