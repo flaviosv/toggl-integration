@@ -8,7 +8,12 @@ function isValidRfc3339(value: string): boolean {
 }
 
 export const dateOrTimestamp = z.string().refine(
-  (value) => DATE_ONLY_PATTERN.test(value) || isValidRfc3339(value),
+  (value) => {
+    if (DATE_ONLY_PATTERN.test(value)) {
+      return !Number.isNaN(Date.parse(value));
+    }
+    return isValidRfc3339(value);
+  },
   { message: "must be a YYYY-MM-DD date or a valid RFC3339 timestamp" },
 );
 
