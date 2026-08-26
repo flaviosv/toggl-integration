@@ -2,7 +2,7 @@
 
 ## Integrations
 
-**Toggl Track:**
+**Toggl Track (webhook source, consumed by `to-jira`):**
 
 - Type: Third-party time-tracking API (webhook source)
 - Purpose: Fires real-time events when a time entry is created, updated, or deleted, driving the entire sync pipeline
@@ -10,6 +10,15 @@
 - Protocol: Webhooks (HTTPS POST, JSON body, HMAC-SHA256 signed)
 - Location: `to-jira/internal/webhook/handler.go` (entrypoint), `to-jira/internal/toggl/` (payload types/parsing)
 - Authentication: Shared-secret HMAC-SHA256 signature verification (`TOGGL_WEBHOOK_SECRET`, `X-Webhook-Signature-256` header) — Toggl authenticates itself to `to-jira`; `to-jira` makes no outbound calls to Toggl
+
+**Toggl Track (REST API, consumed by `mcp`):**
+
+- Type: Third-party time-tracking API (outbound REST client)
+- Purpose: Read-only source for the `list_time_entries` MCP tool — time entries and project names
+- Data flow: Outbound only
+- Protocol: REST (Toggl Track API v9)
+- Location: `mcp/src/toggl/client.ts` (`TogglClient`)
+- Authentication: HTTP Basic Auth — API token as username, literal string `api_token` as password (`TOGGL_API_TOKEN`)
 
 **JIRA Cloud:**
 
@@ -31,7 +40,19 @@
 
 ## API Integrations
 
-### Toggl Track Webhooks (inbound)
+### Toggl Track REST API v9 (outbound, `mcp`)
+
+- Purpose: List time entries and (on demand) projects, to serve the `list_time_entries` MCP tool
+- Location: `mcp/src/toggl/client.ts` (`TogglClient.listTimeEntries`, `TogglClient.listProjects`)
+- Authentication: HTTP Basic Auth (API token as username, literal `api_token` as password)
+- Key endpoints:
+  - `GET /me/time_entries?start_date=&end_date=` — returns entries across every workspace on the account (not just the configured one); `mcp` filters to the configured/overridden workspace client-side after the fetch
+  - `GET /me/projects?include_archived=false` — used only when a filtered time entry carries a `project_id`, and only on a cache miss/stale cache (see `docs/codebase/ARCHITECTURE.md`'s `mcp` — Overview)
+- Rate limit: Toggl enforces 30 requests/hour on this API; `mcp` does not throttle, retry, or back off client-side — a `429` (with `Retry-After` when present) is passed straight back to the MCP client. A call costs at most 2 requests (1 with a warm project cache).
+- Request timeout: 30s (`AbortSignal.timeout(30000)` in `TogglClient.request`)
+- Error classification: any non-2xx or a network failure raises `TogglApiError`/`TogglNetworkError` (`mcp/src/toggl/client.ts`), mapped to a structured MCP error result by `mcp/src/errors.ts`
+
+### Toggl Track Webhooks (inbound, `to-jira`)
 
 - Purpose: Deliver `time_entry.created`, `time_entry.updated`, `time_entry.deleted` events (any other `request_type` is ignored with HTTP 200)
 - Location: `to-jira/internal/webhook/handler.go` (`Handler.Receive`), `to-jira/internal/toggl/envelope.go` (`WebhookEnvelope`, `ParseEnvelope`)
@@ -63,4 +84,4 @@
 
 ## Background Jobs
 
-None. The service has no scheduler, cron, or queue — every action happens synchronously within the webhook request that triggered it. This is an explicit design decision (see AD-002 in `.specs/STATE.md`): Toggl's own at-least-once webhook retry is the sole failure-recovery mechanism, in place of a reconciliation job.
+None in either package. `to-jira` has no scheduler, cron, or queue — every action happens synchronously within the webhook request that triggered it. This is an explicit design decision (see AD-002 in `.specs/STATE.md`): Toggl's own at-least-once webhook retry is the sole failure-recovery mechanism, in place of a reconciliation job. `mcp` has no scheduler either — every tool call resolves synchronously within the same MCP request; the on-disk project cache is refreshed lazily (on a stale/missing read), not on a timer.

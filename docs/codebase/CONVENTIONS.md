@@ -1,5 +1,9 @@
 # Code Conventions
 
+`to-jira` (Go) and `mcp` (TypeScript) are independent packages with independent, language-native
+conventions — the sections below cover `to-jira`; a dedicated **`mcp` (TypeScript) Conventions**
+section follows the Documentation Pattern section, with full detail in `mcp/CLAUDE.md`.
+
 ## Naming Conventions
 
 - **Packages:** short, lowercase, single-word, matching the directory name — `jira`, `toggl`, `sync`, `webhook`, `config`, `di`, `logger`, `server`, `telemetry`.
@@ -44,3 +48,25 @@
 - No OpenAPI/Swagger spec or generated API docs — the single HTTP route is documented via the requirement traceability table in `.specs/features/to-jira/spec.md` and doc comments on `webhook.Handler.Receive`.
 - Feature-level documentation lives in `.specs/features/to-jira/` (spec, design, tasks, validation) via the `tlc-spec-driven` skill — out of scope for this doc set to modify, but a primary source for it.
 - Deliberately deferred edge cases are tracked in `to-jira/docs/NOT_IMPLEMENT.md` rather than as inline `TODO`/`FIXME` comments, each with scenario, why it's not handled, actual impact, and what would close it.
+
+## `mcp` (TypeScript) Conventions
+
+Full depth in `mcp/CLAUDE.md`'s Conventions section; summary here for cross-package comparison.
+
+- **Naming:** files lowercase-hyphenated (`list-time-entries.ts`, `project-cache.ts`), test files
+  `<name>.test.ts` co-located with source; functions `camelCase` (`loadConfig`, `getProjects`),
+  classes/error types `PascalCase` (`TogglClient`, `TogglApiError`, `ConfigError`).
+- **Error handling:** a dedicated `Error` subclass per failure kind (`TogglApiError`,
+  `TogglNetworkError`, `ConfigError`), each setting `this.name`; `ConfigError` collects every
+  invalid/missing env var into one message rather than failing on the first — a deliberate mirror
+  of `to-jira`'s `errors.Join` pattern (see the `TEM-01` comment in `mcp/src/config.ts`).
+- **Type safety:** `strict: true` TypeScript throughout; a `declare` field modifier is used once
+  (`TogglApiError.retryAfter`) specifically to keep an optional field genuinely absent rather than
+  present-but-`undefined`, documented inline since it's non-obvious.
+- **Module system:** ESM (`"type": "module"`, `NodeNext` resolution); relative imports use explicit
+  `.js` extensions even in `.ts` source files (a `NodeNext` requirement, not a style choice).
+- **Documentation pattern:** no package-wide doc-comment convention was established as of this
+  package's first version — most exported functions are undocumented beyond their type signature
+  (one exception: `cache/project-cache.ts`'s `getProjects` gained a full JSDoc block during
+  fix-review). Flagged as a gap (`Q10` in `.specs/features/TOGGL-2-time-entries-mcp/fix-code-review.md`)
+  for the next TypeScript package to establish consistently, not fully closed here.
