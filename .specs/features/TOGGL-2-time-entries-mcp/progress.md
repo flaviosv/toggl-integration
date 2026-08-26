@@ -3,7 +3,7 @@
 ## Run State
 
 - status: in-progress
-- last_completed_step: 1
+- last_completed_step: 11
 - worktree_path: .claude/worktrees/TOGGL-2-time-entries-mcp
 - branch: feature/TOGGL-2_time-entries-mcp
 - base_branch: main
@@ -34,3 +34,5 @@
 - Step 10 (execute): done — Verifier: PASS (113/113 tests, 0 failures, build clean; 4 flagged gaps fixed in fix-verify loop). 22 commits (T1-T15 + docs/validation/fix). AD-004 recorded in .specs/STATE.md, committed separately (fe5b49a).
 - Step 10b (README, gap-fix — original request explicitly asked for it, omitted from grilling seed by this orchestrator): done — mcp/README.md, commit 8f0e9f5
 - Step 11 (push + PR description): done — pushed through fe5b49a, PR #2 description rewritten from spec.md/tasks.md/validation.md
+- Step 12 (complete-review): blocked — 3 attempts failed (2× account session-limit error, 1× stopped by user). Zero reviews posted to PR #2 as of the last check. Awaiting user go-ahead to retry.
+- Out-of-band (post Step 11, pre Step 12): user asked to simplify scope to read-only listing only — commit 697a9d9 (`refactor(mcp): reduce scope to read-only list_time_entries`). Dropped create/update/delete/get_time_entry, refresh_projects, and ticket-code project matching. spec.md rewritten as current source of truth (dropped requirement IDs marked Dropped, not renumbered); design.md/tasks.md/validation.md got short revision notes pointing at spec.md. README.md rewritten. 59/59 tests passing, clean build. Pushed (697a9d9), PR #2 description rewritten again to reflect the reduced scope. Step 12 (complete-review) still needs to run against this new state once resumed.
