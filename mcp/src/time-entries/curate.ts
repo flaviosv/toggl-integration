@@ -13,7 +13,10 @@ export function toCuratedEntry(
   projectsById: Map<number, string>,
 ): CuratedTimeEntry {
   const projectId = entry.project_id;
-  const project = projectId != null ? (projectsById.get(projectId) ?? null) : null;
+  const project =
+    projectId == null
+      ? null
+      : (entry.project_name ?? projectsById.get(projectId) ?? null);
 
   return {
     id: entry.id ?? 0,

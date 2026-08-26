@@ -45,6 +45,20 @@ test("entry with a project_id not present in projectsById (stale/mismatched cach
   assert.equal(result.project, null);
 });
 
+test("entry carrying its own project_name resolves the project even when the cache is empty (explicit project_id bypasses the cache, TEM-16 AC7)", () => {
+  const entry: RawTimeEntry = { ...BASE_ENTRY, project_name: "Time Entries MCP" };
+  const projectsById = new Map<number, string>();
+  const result = toCuratedEntry(entry, projectsById);
+  assert.equal(result.project, "Time Entries MCP");
+});
+
+test("entry's own project_name takes precedence over a stale/mismatched cache entry for the same id", () => {
+  const entry: RawTimeEntry = { ...BASE_ENTRY, project_name: "Current Name" };
+  const projectsById = new Map([[42, "Stale Cached Name"]]);
+  const result = toCuratedEntry(entry, projectsById);
+  assert.equal(result.project, "Current Name");
+});
+
 test("output carries exactly the five CuratedTimeEntry fields, no extra raw fields leak through", () => {
   const entryWithExtras = {
     ...BASE_ENTRY,
